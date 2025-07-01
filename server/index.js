@@ -11,15 +11,25 @@ app.use(cors());
 app.use(express.json());
 
 
-app.get('/messages', async (req, res) => {
-    db.all("SELECT * FROM messages ORDER BY timestamp ASC", [], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json(rows);
-        }
-    });
-});
+// app.get('/messages', async (req, res) => {
+//     db.all("SELECT * FROM messages ORDER BY timestamp ASC", [], (err, rows) => {
+//         if (err) {
+//             res.status(500).json({ error: err.message });
+//         } else {
+//             res.json(rows);
+//         }
+//     });
+// });
+// app.post('/messages', async (req, res) => {
+//     const { user, content } = req.body;
+//     db.run("INSERT INTO messages (user, content) VALUES (?, ?)", [user, content], function(err) {
+//         if (err) {
+//             res.status(500).json({ error: err.message });
+//         } else {
+//             res.status(201).json({ id: this.lastID, user, content });
+//         }
+//     });
+// });
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -30,6 +40,17 @@ const io = new Server(server, {
 
 io.on('connection', (socket) => {
   console.log('New client connected');
+
+  socket.on('getMessages', () => {
+    db.all("SELECT * FROM messages ORDER BY timestamp ASC", [], (err, rows) => {
+      if (err) {
+        console.error('Error fetching messages:', err);
+        socket.emit('errorMessage', { error: err.message });
+      } else {
+        socket.emit('messages', rows);
+      }
+    });
+    });
 
   socket.on('newMessage', ({ user, content }) => {
     db.run("INSERT INTO messages (user, content) VALUES (?, ?)", [user, content], function(err) {
@@ -49,16 +70,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// app.post('/messages', async (req, res) => {
-//     const { user, content } = req.body;
-//     db.run("INSERT INTO messages (user, content) VALUES (?, ?)", [user, content], function(err) {
-//         if (err) {
-//             res.status(500).json({ error: err.message });
-//         } else {
-//             res.status(201).json({ id: this.lastID, user, content });
-//         }
-//     });
-// });
 
 server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);

@@ -9,11 +9,14 @@ export default function Chat() {
     const [messages, setMessages] = useState([]);
 
     useEffect(() => {
-        // Fetch messages from the server
-        fetch("http://localhost:3001/messages")
-        .then((res) => res.json())
-        .then(setMessages)
-        .catch(console.error);
+        
+        // Fetch existing messages from the server when the component mounts
+        socket.emit("getMessages");
+
+        // Listen for the initial messages from the server
+        socket.on("messages", (messages) => {
+            setMessages(messages);
+        });
 
         // Listen for new messages from the server
         socket.on("newMessage", (message) => {
@@ -23,6 +26,7 @@ export default function Chat() {
         // Cleanup function to remove the event listener when the component unmounts
         return () => {
             socket.off("newMessage");
+            socket.off("messages");
         };
     }, []);
 
