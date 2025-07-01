@@ -3,85 +3,153 @@ import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
 export default function Chat({ user, token }) {
-    const [messages, setMessages] = useState([]);
-    const messagesEndRef = useRef(null);
+    const [fileName, setFileName] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const messagesEndRef = useRef(null);
+  const socketRef = useRef();
 
-    const socketRef = useRef();
-    
-    useEffect(() => {
-        socketRef.current = io("http://localhost:3001", {
-            auth: { token }
-        });
+  useEffect(() => {
+    socketRef.current = io("http://localhost:3001", {
+      auth: { token },
+    });
 
-        // Fetch existing messages from the server when the component mounts
-        socketRef.current.emit("getMessages");
+    socketRef.current.emit("getMessages");
 
-        // Listen for the initial messages from the server
-        socketRef.current.on("messages", (messages) => {
-            setMessages(messages);
-        });
+    socketRef.current.on("messages", (messages) => {
+      setMessages(messages);
+    });
 
-        // Listen for new messages from the server
-        socketRef.current.on("newMessage", (message) => {
-            setMessages((prev) => [...prev, message]);
-        });
+    socketRef.current.on("newMessage", (message) => {
+      setMessages((prev) => [...prev, message]);
+    });
 
-        // Cleanup function to remove the event listener when the component unmounts
-        return () => {
-            socketRef.current.off("newMessage");
-            socketRef.current.off("messages");
-        };
-    }, [token]);
+    return () => {
+      socketRef.current.off("newMessage");
+      socketRef.current.off("messages");
+      socketRef.current.disconnect();
+    };
+  }, [token]);
 
-    useEffect(() => {
-        if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-        }
-    }, [messages]);
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
-   function handleSendMessage() {
-        const input = document.querySelector(".chat-input input");
-        const content = input.value.trim();
-        if (!content) return;
+  function handleFileChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    setFileName(file.name);
+    setSelectedFile(file);
+  }
 
-        // Turn the button into a loading state
-        // to prevent multiple clicks while sending the message
-        const btnSendMessage = document.getElementById("send-message-btn");
-        btnSendMessage.disabled = true;
-        btnSendMessage.textContent = "Sending...";
-        input.value = "";
+  async function handleSendMessage() {
+    const btnSendMessage = document.getElementById("send-message-btn");
+    btnSendMessage.disabled = true;
+    btnSendMessage.textContent = "Sending...";
 
-       // Emit the new message to the server
-        socket.emit("newMessage", { user: user.username, content });
+    const input = document.querySelector('input[type="text"]');
+    const content = input.value.trim();
 
-        // Simulate a network delay
-        setTimeout(() => {
-            btnSendMessage.disabled = false;
-            btnSendMessage.textContent = "Send";
-        }, 2000);
+    if (!content && !selectedFile) {
+      btnSendMessage.disabled = false;
+      btnSendMessage.textContent = "Send";
+      return;
     }
 
-    return (
-        <div className="chat-component">
-            <div className="chat-header">
-                <h1>Realtime Chat</h1>
-                <p>Stay connected with your friends!</p>
-        </div>
+    let fileUrl = null;
+
+    if (selectedFile) {
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const response = await fetch("http://localhost:3001/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error("Upload failed");
+
+        const data = await response.json();
+
+        fileUrl = `http://localhost:3001${data.fileUrl}`;
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        alert("File upload failed, please try again.");
+        btnSendMessage.disabled = false;
+        btnSendMessage.textContent = "Send";
+        return;
+      }
+    }
+
+    // Wyślij username jako string, nie obiekt user
+    socketRef.current.emit("newMessage", {
+      user: user.username || user, 
+      content,
+      fileUrl,
+    });
+
+    input.value = "";
+    setSelectedFile(null);
+
+    // Reset input file
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = "";
+
+    btnSendMessage.disabled = false;
+    btnSendMessage.textContent = "Send";
+  }
+
+  function handleKeyDown(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    handleSendMessage();
+  }}
+
+  return (
+    <div className="chat-component">
+      <div className="chat-header">
+        <h1>Realtime Chat</h1>
+        <p>Stay connected with your friends!</p>
+      </div>
       {messages.length > 0 ? (
         <ul className="chat-messages">
-          {messages.map(message => (
-            <li key={message.id}>
-              <strong>{message.user}</strong>: {message.content}
+          {messages.map((msg) => (
+            <li key={msg.id}>
+              <strong>{msg.user}</strong>: {msg.content}{" "}
+              {msg.fileUrl && (
+                /\.(jpeg|jpg|gif|png)$/i.test(msg.fileUrl) ? (
+                  <img
+                    src={msg.fileUrl}
+                    alt="uploaded"
+                    style={{ maxWidth: "200px" }}
+                  />
+                ) : (
+                  <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
+                    Download file
+                  </a>
+                )
+              )}
             </li>
           ))}
           <div ref={messagesEndRef} />
         </ul>
       ) : (
-        <p>No messages found.</p>
+        <p className="no-messages">No messages yet. Start the conversation!</p>
       )}
       <div className="chat-input">
-        <input type="text" placeholder="Type your message..." />
-        <button id="send-message-btn" onClick={handleSendMessage}>Send</button>
+        <input type="text" placeholder="Type your message..." onKeyDown={handleKeyDown} />
+         <div className="file-input-wrapper">
+            <label htmlFor="file-upload" className="custom-file-upload">
+                Wybierz plik
+            </label>
+            <input id="file-upload" type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
+        </div>
+        <button id="send-message-btn" onClick={handleSendMessage}>
+          Send
+        </button>
       </div>
     </div>
   );

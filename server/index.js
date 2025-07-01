@@ -6,6 +6,8 @@ const db = require('./database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const multer = require('multer');
+const path = require('path');
 
 // Initialize the Express application
 const app = express();
@@ -17,25 +19,6 @@ app.use(cors());
 app.use(express.json());
 
 
-// app.get('/messages', async (req, res) => {
-//     db.all("SELECT * FROM messages ORDER BY timestamp ASC", [], (err, rows) => {
-//         if (err) {
-//             res.status(500).json({ error: err.message });
-//         } else {
-//             res.json(rows);
-//         }
-//     });
-// });
-// app.post('/messages', async (req, res) => {
-//     const { user, content } = req.body;
-//     db.run("INSERT INTO messages (user, content) VALUES (?, ?)", [user, content], function(err) {
-//         if (err) {
-//             res.status(500).json({ error: err.message });
-//         } else {
-//             res.status(201).json({ id: this.lastID, user, content });
-//         }
-//     });
-// });
 
 // Create the server and Socket.IO instance
 const server = http.createServer(app);
@@ -45,6 +28,26 @@ const io = new Server(server, {
   }
 });
 
+// konfiguracja multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage });
+
+// statyczny folder, żeby pliki były dostępne pod /uploads/filename
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
+app.post('/upload', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const fileUrl = `/uploads/${req.file.filename}`;
+  res.json({ fileUrl });
+});
 
 // Register endpoint
 // Validates input, checks for existing username, hashes password, and stores user in the database
@@ -64,20 +67,21 @@ app.post('/register', async (req, res) => {
         if (row) {
             return res.status(400).json({ error: 'Username already exists' });
         }
-    });
 
-    // Hash the password and store the user
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        db.run("INSERT INTO users (username, password) VALUES (?, ?)", [username, hashedPassword], function(err) {
-            if (err) {
-                return res.status(400).json({ error: 'Username already exists' });
-            }
-            res.status(201).json({ username });
-        });
-    } catch (hashErr) {
+        // No user found — proceed to hash and insert
+        try {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            db.run("INSERT INTO users (username, password) VALUES (?, ?)", [username, hashedPassword], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Could not create user' });
+                }
+                const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+                res.status(201).json({ username, token });
+            });
+        } catch (hashErr) {
             res.status(500).json({ error: 'Error hashing password' });
         }
+    });
 });
 
 // Login endpoint
@@ -119,6 +123,7 @@ io.use((socket, next) => {
     });
 });
 
+
 // WebSocket connection handler
 // Listens for 'getMessages' to fetch existing messages and 'newMessage' to handle
 io.on('connection', (socket) => {
@@ -137,16 +142,17 @@ io.on('connection', (socket) => {
 
   socket.on('newMessage', (data) => {
     const content = data.content?.trim();
-    if (!content) return;
+    const fileUrl = data.fileUrl || null;
+    if (!content && !fileUrl) return;
 
     const user = socket.user;
-    db.run("INSERT INTO messages (user, content) VALUES (?, ?)", [user, content], function(err) {
+    db.run("INSERT INTO messages (user, content, fileUrl) VALUES (?, ?, ?)", [user, content, fileUrl], function(err) {
       if (err) {
         console.error('Error inserting message:', err);
         socket.emit('errorMessage', { error: err.message });
         return;
       } else {
-        const newMessage = { id: this.lastID, user, content, timestamp: new Date().toISOString() };
+        const newMessage = { id: this.lastID, user, content, fileUrl, timestamp: new Date().toISOString() };
         io.emit('newMessage', newMessage);
       }
     });

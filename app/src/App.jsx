@@ -30,9 +30,6 @@ function App() {
 
   return (
     <>
-      <h1>Realtime Chat</h1>
-      <p>Welcome to the chat application!</p>
-      <p>Feel free to send messages and interact with others.</p>
       
       {user ? (
         <>
@@ -42,9 +39,6 @@ function App() {
       ) : (
         <Login onLogin={handleLogin} />
       )}
-      <footer>
-        <p>© 2025 Realtime Chat. All rights reserved.</p>
-      </footer>
     </>
   )
 }

@@ -56,3 +56,21 @@
     cursor: pointer;
     color: #4CAF50;
 }
+
+@media screen and (max-width: 500px) {
+    .login-form {
+        width: 90%;
+        height: auto;
+        margin-top: 20px;
+    }
+    .login-header h1 {
+        font-size: 20px;
+    }
+    .login-header p {
+        font-size: 14px;
+    }
+    .login-input input, .login-input button {
+        width: 100%;
+    }
+    
+}

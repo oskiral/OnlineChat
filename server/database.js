@@ -25,6 +25,7 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user TEXT NOT NULL,
       content TEXT NOT NULL,
+      fileUrl TEXT,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
