@@ -1,43 +1,53 @@
 import "./Chat.css";
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:3001");
+
 
 export default function Chat() {
     const [messages, setMessages] = useState([]);
 
     useEffect(() => {
         // Fetch messages from the server
-        fetch('http://localhost:3001/messages')
-            .then(response => response.json())
-            .then(data => setMessages(data))
-            .catch(error => console.error('Error fetching messages:', error));
+        fetch("http://localhost:3001/messages")
+        .then((res) => res.json())
+        .then(setMessages)
+        .catch(console.error);
+
+        // Listen for new messages from the server
+        socket.on("newMessage", (message) => {
+            setMessages((prev) => [...prev, message]);
+        });
+
+        // Cleanup function to remove the event listener when the component unmounts
+        return () => {
+            socket.off("newMessage");
+        };
     }, []);
 
-    function handleSendMessage() {
-        const btnSendMessage = document.getElementById('send-message-btn');
-        btnSendMessage.disabled = true; // Disable the button to prevent multiple clicks
-        btnSendMessage.textContent = 'Sending...'; // Change button text to indicate sending
-        document.querySelector('.chat-input input').value = ''; // Clear the input field
+   function handleSendMessage() {
+        const input = document.querySelector(".chat-input input");
+        const content = input.value.trim();
+        if (!content) return;
 
-        // Simulate sending a message
+        const user = "oskar"; 
+
+        // Turn the button into a loading state
+        // to prevent multiple clicks while sending the message
+        const btnSendMessage = document.getElementById("send-message-btn");
+        btnSendMessage.disabled = true;
+        btnSendMessage.textContent = "Sending...";
+        input.value = "";
+
+       // Emit the new message to the server
+        socket.emit("newMessage", { user, content });
+
+        // Simulate a network delay
         setTimeout(() => {
-            btnSendMessage.disabled = false; // Re-enable the button
-            btnSendMessage.textContent = 'Send'; // Reset button text
+            btnSendMessage.disabled = false;
+            btnSendMessage.textContent = "Send";
         }, 2000);
-
-        const user = 'oskar'; // Example user
-        const content = document.querySelector('.chat-input input').value; // Get message content from input
-        fetch('http://localhost:3001/messages', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user, content }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                setMessages(prevMessages => [...prevMessages, data]);
-            })
-            .catch(error => console.error('Error sending message:', error));
     }
 
     return (
