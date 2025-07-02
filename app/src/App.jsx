@@ -1,46 +1,107 @@
 import { useState, useEffect } from "react";
-import Chat from "../Components/Chat"
-import Login from "../Components/Login"
-import UserPanel from "../Components/UserPanel"
+import Chat from "../Components/Chat";
+import Login from "../Components/Login";
+import UserPanel from "../Components/UserPanel";
+import { SocketProvider } from "../utils/socketProvider";
 
 function App() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Check for existing user in localStorage on initial render
-  // If found, set the user state with username and token
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const username = localStorage.getItem('username');
-    if (token && username) {
-      setUser({ username, token });
+    async function fetchUser() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("http://localhost:3001/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Unauthorized");
+
+        const data = await res.json();
+        if (data?.username) {
+          setUser({ ...data, token }); // ustawia username, avatar i token
+          localStorage.setItem("username", data.username);
+        } else {
+          throw new Error("Invalid user data");
+        }
+      } catch (err) {
+        console.warn("Session expired or invalid:", err);
+        localStorage.removeItem("token");
+        localStorage.removeItem("username");
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     }
+
+    fetchUser();
   }, []);
 
-  function handleLogin(userData) {
-    setUser(userData);
-    localStorage.setItem('token', userData.token);
-    localStorage.setItem('username', userData.username);
+  useEffect(() => {
+    console.log("User state updated:", user);
+  }, [user]);
+
+  // Handle login by storing user data in local storage and updating state
+  // This function is called from the Login component when the user successfully logs in.
+  async function handleLogin(userData) {
+
+
+    // Validate userData before proceeding
+    if (!userData || !userData.token || !userData.username) {
+      console.error("Invalid user data:", userData);
+      return;
+    }
+
+    // Store token and username in local storage
+    localStorage.setItem("token", userData.token);
+    localStorage.setItem("username", userData.username);
+
+    // Fetch user data from the server using the token
+    // This ensures that we have the latest user information, including avatar.
+    // If the token is invalid or expired, this will throw an error.
+    try {
+      const res = await fetch("http://localhost:3001/me", {
+        headers: { Authorization: `Bearer ${userData.token}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch user data");
+      const data = await res.json();
+      setUser({ ...data, token: userData.token });
+    } catch {
+      setUser({ username: userData.username, token: userData.token, avatar: null });
+    }
   }
 
   function handleLogout() {
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
   }
 
-  return (
-    <>
-      
-      {user ? (
-        <>
-          <UserPanel user={user} onLogout={handleLogout} />
-          <Chat user={user.username} token={user.token} />
-        </>
-      ) : (
-        <Login onLogin={handleLogin} />
-      )}
-    </>
-  )
+  if (loading) return <div>Loading...</div>;
+
+  return user ? (
+    <SocketProvider token={user.token} username={user.username} setUser={setUser}>
+      <UserPanel
+        user={user}
+        setUser={setUser}
+        onLogout={handleLogout}
+        token={user.token}
+        onUpload={(url) => setUser((prev) => ({ ...prev, avatar: url }))}
+      />
+      <Chat user={user.username} token={user.token} onLogout={handleLogout} />
+    </SocketProvider>
+  ) : (
+    <Login onLogin={handleLogin} />
+  );
 }
 
-export default App
+export default App;
+// This is the main application component that handles user authentication and displays either the chat interface or the login form.
+// It uses local storage to persist user sessions and fetches user data from the server on initial load.
+// The user panel allows the user to upload an avatar and log out, while the chat component
+// provides the real-time messaging functionality.

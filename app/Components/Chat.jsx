@@ -1,9 +1,10 @@
 import "./Chat.css";
+import resizeImage from "../utils/resizeImage";
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
-export default function Chat({ user, token }) {
-    const [fileName, setFileName] = useState("");
+export default function Chat({ user, token, onLogout }) {
+  const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
@@ -24,6 +25,17 @@ export default function Chat({ user, token }) {
       setMessages((prev) => [...prev, message]);
     });
 
+    socketRef.current.on('forceLogout', () => {
+      onLogout();
+    });
+
+    socketRef.current.on("forceLogin", (userData) => {
+      console.log("forceLogin received:", userData);
+      localStorage.setItem("token", userData.token);
+      localStorage.setItem("username", userData.username);
+      setUser(userData);
+    });
+
     return () => {
       socketRef.current.off("newMessage");
       socketRef.current.off("messages");
@@ -37,11 +49,23 @@ export default function Chat({ user, token }) {
     }
   }, [messages]);
 
-  function handleFileChange(event) {
+  
+  // handler for file input change
+  // This function resizes images if they are larger than 200px width
+  async function handleFileChange(event) {
     const file = event.target.files[0];
     if (!file) return;
-    setFileName(file.name);
-    setSelectedFile(file);
+    if (file.type.startsWith("image/")) {
+        try {
+            const resized = await resizeImage(file, { maxWidth: 200 });
+            setSelectedFile(resized);
+        } catch (err) {
+            console.error("Image resize failed", err);
+            setSelectedFile(file); // fallback to original
+        }
+    } else {
+        setSelectedFile(file); // for PDFs or other types
+    }
   }
 
   async function handleSendMessage() {
@@ -84,7 +108,6 @@ export default function Chat({ user, token }) {
       }
     }
 
-    // Wyślij username jako string, nie obiekt user
     socketRef.current.emit("newMessage", {
       user: user.username || user, 
       content,
@@ -106,7 +129,8 @@ export default function Chat({ user, token }) {
   if (event.key === "Enter") {
     event.preventDefault();
     handleSendMessage();
-  }}
+  }
+}
 
   return (
     <div className="chat-component">
@@ -114,10 +138,11 @@ export default function Chat({ user, token }) {
         <h1>Realtime Chat</h1>
         <p>Stay connected with your friends!</p>
       </div>
+      
       {messages.length > 0 ? (
         <ul className="chat-messages">
           {messages.map((msg) => (
-            <li key={msg.id}>
+            <li key={msg.message_id}>
               <strong>{msg.user}</strong>: {msg.content}{" "}
               {msg.fileUrl && (
                 /\.(jpeg|jpg|gif|png)$/i.test(msg.fileUrl) ? (
@@ -128,7 +153,7 @@ export default function Chat({ user, token }) {
                   />
                 ) : (
                   <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
-                    Download file
+                    {fileName || "Download file"}
                   </a>
                 )
               )}
@@ -143,7 +168,7 @@ export default function Chat({ user, token }) {
         <input type="text" placeholder="Type your message..." onKeyDown={handleKeyDown} />
          <div className="file-input-wrapper">
             <label htmlFor="file-upload" className="custom-file-upload">
-                Wybierz plik
+                Chose File
             </label>
             <input id="file-upload" type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
         </div>

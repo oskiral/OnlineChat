@@ -1,0 +1,73 @@
+import resizeImage from "../utils/resizeImage";
+import "./Avatar.css";
+import { useRef } from "react";
+
+export default function Avatar({ user, onUpload, token, unUploadAvatar }) {
+    const fileInputRef = useRef(null);
+
+    async function handleAvatarChange(event) {
+        let file = event.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            alert("Please upload a valid image file.");
+            return;
+        }
+
+        const resized = await resizeImage(file, {
+            maxWidth: 50,
+            maxHeight: 50,
+            forceSize: true
+        });
+
+        if (resized) {
+            file = resized;
+        }
+
+        const formData = new FormData();
+        formData.append("avatar", file);
+
+        const res = await fetch("http://localhost:3001/uploadAvatar", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            onUpload(data.fileUrl);
+        } else {
+            alert("Upload failed");
+        }
+    }
+
+    function triggerFileInput() {
+        fileInputRef.current.click();
+    }
+
+    return (
+        <div className="avatar-component">
+            <img
+                src={user.avatar || "../media/default.jpg"}
+                alt="User Avatar"
+                className="avatar"
+                onClick={triggerFileInput}
+                style={{ cursor: "pointer" }}
+                title="Click to change avatar"
+            />
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleAvatarChange}
+            />
+            <button onClick={unUploadAvatar}>Remove Avatar</button>
+        </div>
+    );
+}
+// This component allows the user to upload and display their avatar.
+// It uses a file input to select an image, resizes it, and uploads it to the server.
+// The avatar is displayed as an image, and clicking it opens the file selector.
