@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-const SocketContext = createContext(null);
+export const SocketContext = createContext(null);
 
 export function SocketProvider({ token, children, setUser }) {
   const [socket, setSocket] = useState(null);
@@ -32,12 +32,12 @@ export function SocketProvider({ token, children, setUser }) {
     });
 
     // handles forceLogin
-    newSocket.on("forceLogin", (userData) => {
-      console.log("forceLogin received:", userData);
-      localStorage.setItem("token", userData.token);
-      localStorage.setItem("username", userData.username);
-      setUser(userData);
-    });
+    // newSocket.on("forceLogin", (userData) => {
+    //   console.log("SocketProvider got forceLogin event:", userData);
+    //   localStorage.setItem("token", userData.token);
+    //   localStorage.setItem("username", userData.username);
+    //   setUser(userData);
+    // });
 
     return () => {
       newSocket.disconnect();

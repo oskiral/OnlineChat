@@ -1,53 +1,46 @@
 import "./Chat.css";
 import resizeImage from "../utils/resizeImage";
-import { useEffect, useState, useRef } from "react";
-import { io } from "socket.io-client";
+import { useEffect, useState, useRef, useContext } from "react";
+import {SocketContext} from "../utils/socketProvider";
 
-export default function Chat({ user, token, onLogout }) {
+export default function Chat({ user, token, onLogout, setUser }) {
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
-  const socketRef = useRef();
+  const socket =  useContext(SocketContext);
 
   useEffect(() => {
-    socketRef.current = io("http://localhost:3001", {
-      auth: { token },
-    });
+  if (!socket) return;
 
-    socketRef.current.emit("getMessages");
+  socket.emit("getMessages");
 
-    socketRef.current.on("messages", (messages) => {
-      setMessages(messages);
-    });
+  socket.on("messages", (messages) => {
+    setMessages(messages);
+  });
 
-    socketRef.current.on("newMessage", (message) => {
-      setMessages((prev) => [...prev, message]);
-    });
+  socket.on("newMessage", (message) => {
+    setMessages((prev) => [...prev, message]);
+  });
 
-    socketRef.current.on('forceLogout', () => {
-      onLogout();
-    });
+  socket.on("forceLogout", () => {
+    onLogout();
+  });
 
-    socketRef.current.on("forceLogin", (userData) => {
-      console.log("forceLogin received:", userData);
-      localStorage.setItem("token", userData.token);
-      localStorage.setItem("username", userData.username);
-      setUser(userData);
-    });
+  // socket.on("forceLogin", (userData) => {
+  //   console.log("Chat component got forceLogin event:", userData);
+  //   localStorage.setItem("token", userData.token);
+  //   localStorage.setItem("username", userData.username);
+  //   setUser(userData);
+  // });
 
-    return () => {
-      socketRef.current.off("newMessage");
-      socketRef.current.off("messages");
-      socketRef.current.disconnect();
-    };
-  }, [token]);
-
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
+  return () => {
+    socket.off("newMessage");
+    socket.off("messages");
+    socket.off("forceLogout");
+    // socket.off("forceLogin");
+  };
+}, [socket]);
 
   
   // handler for file input change
@@ -69,6 +62,11 @@ export default function Chat({ user, token, onLogout }) {
   }
 
   async function handleSendMessage() {
+
+    if (!socket) {
+      console.error("Socket is not connected");
+      return;
+    }
     const btnSendMessage = document.getElementById("send-message-btn");
     btnSendMessage.disabled = true;
     btnSendMessage.textContent = "Sending...";
@@ -108,8 +106,8 @@ export default function Chat({ user, token, onLogout }) {
       }
     }
 
-    socketRef.current.emit("newMessage", {
-      user: user.username || user, 
+    socket.emit("newMessage", {
+      user: user.username || user,
       content,
       fileUrl,
     });

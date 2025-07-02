@@ -2,8 +2,26 @@ import resizeImage from "../utils/resizeImage";
 import "./Avatar.css";
 import { useRef } from "react";
 
-export default function Avatar({ user, onUpload, token, unUploadAvatar }) {
+export default function Avatar({ user, onUpload, token }) {
     const fileInputRef = useRef(null);
+    
+    async function unUploadAvatar() {
+    // Ustaw awatar na defaultowy lokalnie
+    onUpload(null);
+
+    // Wyślij request do backendu, by zresetować avatar w DB
+    const res = await fetch("http://localhost:3001/removeAvatar", {
+        method: "POST",
+        headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!res.ok) {
+        alert("Failed to remove avatar");
+    }
+    }
 
     async function handleAvatarChange(event) {
         let file = event.target.files[0];

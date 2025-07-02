@@ -93,7 +93,7 @@ function App() {
         token={user.token}
         onUpload={(url) => setUser((prev) => ({ ...prev, avatar: url }))}
       />
-      <Chat user={user.username} token={user.token} onLogout={handleLogout} />
+      <Chat user={user.username} token={user.token} onLogout={handleLogout}  setUser={setUser}/>
     </SocketProvider>
   ) : (
     <Login onLogin={handleLogin} />

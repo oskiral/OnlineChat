@@ -253,12 +253,14 @@ app.post('/login', async (req, res) => {
 
         // handles forceLogin
 
-        if (socketsSet) {
-          socketsSet.forEach(socket => {
-            socket.emit("forceLogin", { username: user.username, token });
-          });
-        }
-
+        // if (socketsSet) {
+        //   console.log("Force login emit to sockets:", socketsSet.size);
+        //   socketsSet.forEach(socket => {
+        //     socket.emit("forceLogin", { username: user.username, token });
+        //   });
+        // } else {
+        //   console.log("No sockets found for user", user.username);
+        // }
 
 
         // Insert session data into the database
@@ -281,6 +283,44 @@ app.post('/login', async (req, res) => {
         res.status(200).json({username: user.username, token });
     });
 });
+
+
+// Endpoint to remove avatar
+// Validates the JWT token, retrieves the user's avatar from the database,
+app.post('/removeAvatar', (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(401).json({ error: 'Invalid token' });
+
+    const username = decoded.username;
+
+    // Usuń plik starego awatara z serwera jeśli istnieje
+    db.get("SELECT avatar FROM users WHERE username = ?", [username], (err, row) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+
+      if (row && row.avatar) {
+        const avatarPath = row.avatar.startsWith('http')
+          ? new URL(row.avatar).pathname
+          : row.avatar;
+        const fullPath = path.join(__dirname, avatarPath.startsWith('/') ? avatarPath.slice(1) : avatarPath);
+
+        fs.unlink(fullPath, (err) => {
+          if (err) console.warn("Failed to delete avatar file:", err.message);
+        });
+      }
+
+      // Zresetuj avatar w DB na null lub ścieżkę do defaultowego
+      db.run("UPDATE users SET avatar = NULL WHERE username = ?", [username], (err) => {
+        if (err) return res.status(500).json({ error: 'Could not reset avatar' });
+
+        res.json({ message: 'Avatar removed' });
+      });
+    });
+  });
+});
+
 
 
 // endpoint to log out
