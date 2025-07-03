@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import Chat from "../Components/Chat";
 import Login from "../Components/Login";
 import UserPanel from "../Components/UserPanel";
+import FriendsPage from "../Components/FriendsPage";
+
 import { SocketProvider } from "../utils/socketProvider";
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -94,6 +97,7 @@ function App() {
         onUpload={(url) => setUser((prev) => ({ ...prev, avatar: url }))}
       />
       <Chat user={user.username} token={user.token} onLogout={handleLogout}  setUser={setUser}/>
+      <FriendsPage />
     </SocketProvider>
   ) : (
     <Login onLogin={handleLogin} />

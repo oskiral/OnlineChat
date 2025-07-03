@@ -84,12 +84,12 @@ db.serialize(() => {
       CREATE TABLE IF NOT EXISTS friend_requests (
         frequest_id INTEGER PRIMARY KEY AUTOINCREMENT,
         sender_id INTEGER NOT NULL,
-        reciever_id INTEGER NOT NULL,
+        receiver_id INTEGER NOT NULL,
         status TEXT DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(sender_id, reciever_id),
+        UNIQUE(sender_id, receiver_id),
         FOREIGN KEY(sender_id) REFERENCES users(user_id),
-        FOREIGN KEY(reciever_id) REFERENCES users(user_id)
+        FOREIGN KEY(receiver_id) REFERENCES users(user_id)
       );
       `);
       // there are 3 states of status: pending, accepted, rejected

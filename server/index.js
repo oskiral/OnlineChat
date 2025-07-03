@@ -258,7 +258,7 @@ app.post('/register', async (req, res) => {
 // Validates user credentials and returns a JWT token
 app.post('/login', async (req, res) => {
 
-
+    console.log("logged");
     const { username, password } = req.body;
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
@@ -512,20 +512,78 @@ app.get("/users/search", authenticate, async (req, res) => {
   }
 })
 
-app.post('/friend-requests/send', authenticate, async (req, res) => {
-  const senderId = req.user.id;
-  const {recieverId} = req.body;
+app.get("/friends", authenticate, async (req, res) => {
+  const userId = req.user.user_id;
 
-  if (!recieverId || recieverId === senderId) {
-    return res.status(400).json({error: "Invalid recieverId"});
+  if (!userId) {
+    return res.status(400).json({ error: "Invalid userId" });
   }
 
   try {
+    const friendships = await new Promise((resolve, reject) => {
+      const sql = `SELECT user1_id, user2_id FROM friendships WHERE user1_id = ? OR user2_id = ?`;
+      db.all(sql, [userId, userId], (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
+    });
+
+    // Wyciągamy listę znajomych (to ten user, który nie jest aktualnym userId)
+    const friendIds = friendships.map(f => (f.user1_id === userId ? f.user2_id : f.user1_id));
+
+    if (friendIds.length === 0) return res.json([]);
+
+    // Pobieramy dane znajomych
+    const placeholders = friendIds.map(() => '?').join(',');
+    const users = await new Promise((resolve, reject) => {
+      const sql = `SELECT user_id, username, avatar FROM users WHERE user_id IN (${placeholders})`;
+      db.all(sql, friendIds, (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
+    });
+
+    res.json(users);
+
+  } catch (err) {
+    console.error('Error fetching friends:', err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post('/friend-requests/send', authenticate, async (req, res) => {
+  const senderId = req.user.user_id;
+  const { recieverUsername } = req.body;
+
+  if (!recieverUsername) {
+    return res.status(400).json({ error: "Invalid recieverUsername" });
+  }
+
+  try {
+    // Pobierz user_id po username
+    const receiverUser = await new Promise((resolve, reject) => {
+      db.get("SELECT user_id FROM users WHERE username = ?", [recieverUsername], (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
+    });
+
+    if (!receiverUser) {
+      return res.status(404).json({ error: "Receiver user not found" });
+    }
+
+    const recieverId = receiverUser.user_id;
+
+    if (recieverId === senderId) {
+      return res.status(400).json({ error: "Cannot add yourself as friend" });
+    }
+
+    // Sprawdź czy zaproszenie lub znajomość już istnieje
     const existing = await new Promise((resolve, reject) => {
       const sql = `
-      SELECT * FROM friend_requests 
-      WHERE (sender_id = ? AND receiver_id = ?) 
-      OR (sender_id = ? AND receiver_id = ?)
+        SELECT * FROM friend_requests 
+        WHERE (sender_id = ? AND receiver_id = ?) 
+          OR (sender_id = ? AND receiver_id = ?)
       `;
       db.get(sql, [senderId, recieverId, recieverId, senderId], (err, row) => {
         if (err) return reject(err);
@@ -533,11 +591,11 @@ app.post('/friend-requests/send', authenticate, async (req, res) => {
       });
     });
 
-
     if (existing) {
-      return res.status(400).json({error: "Friend requests already exists or you are already connected"})
-    };
+      return res.status(400).json({ error: "Friend request already exists or you are already connected" });
+    }
 
+    // Dodaj zaproszenie
     await new Promise((resolve, reject) => {
       const sql = `INSERT INTO friend_requests (sender_id, receiver_id, status) VALUES (?, ?, 'pending')`;
       db.run(sql, [senderId, recieverId], function(err) {
@@ -546,16 +604,16 @@ app.post('/friend-requests/send', authenticate, async (req, res) => {
       });
     });
 
-    res.json({success: true, message: "Friend request sent"})
+    res.json({ success: true, message: "Friend request sent" });
 
   } catch (err) {
-      console.error("Send friend request error: ", err);
-      res.status(500).json({error: "Server error"});
-  };
-});
+    console.error("Send friend request error:", err);
+  }})
+
 
 app.post("/friend-requests/accept", authenticate, async (req, res) => {
-  const recieverId = req.user.id;
+  console.log(req.body);
+  const recieverId = req.user.user_id;
   const {senderId} = req.body;
 
   try {
