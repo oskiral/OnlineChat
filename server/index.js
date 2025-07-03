@@ -11,18 +11,21 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
+const createRoomService = require('./services/room.js');
+const registerSocketHandlers = require("./sockets/index.js");
+
 // Initialize the Express application
 const app = express();
 const port = process.env.PORT;
 const JWT_SECRET = process.env.JWT_SECRET;
+
+const roomService = createRoomService(db);
 const userSockets = new Map(); // zamiast sessionSockets
 
 
 // Middleware to parse JSON and enable CORS
 app.use(cors());
 app.use(express.json());
-
-
 
 // Create the server and Socket.IO instance
 const server = http.createServer(app);
@@ -31,6 +34,10 @@ const io = new Server(server, {
     origin: '*',
   }
 });
+registerSocketHandlers(io, db);
+
+
+
 
 
 
@@ -249,8 +256,6 @@ app.post('/login', async (req, res) => {
         const userAgent = req.headers['user-agent'] || 'unknown';
 
 
-        const socketsSet = userSockets.get(user.username);
-
         // handles forceLogin
 
         // if (socketsSet) {
@@ -425,47 +430,9 @@ io.use((socket, next) => {
 
 
 
-// WebSocket connection handler
-// Listens for 'getMessages' to fetch existing messages and 'newMessage' to handle
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
-
-  socket.on('getMessages', () => {
-    db.all("SELECT * FROM messages ORDER BY timestamp ASC", [], (err, rows) => {
-      if (err) {
-        console.error('Error fetching messages:', err);
-        socket.emit('errorMessage', { error: err.message });
-      } else {
-        socket.emit('messages', rows);
-      }
-    });
-    });
-
-  // Handle new messages
-  // Validates content, checks for empty messages, and inserts into the database
-  socket.on('newMessage', (data) => {
-    const content = data.content?.trim();
-    const fileUrl = data.fileUrl || null;
-    if (!content && !fileUrl) return;
-
-    // Ensure the user is authenticated
-    if (!socket.user) {
-      socket.emit('errorMessage', { error: 'User not authenticated' });
-      return;
-    }
-
-    const user = socket.user;
-    db.run("INSERT INTO messages (user, content, fileUrl) VALUES (?, ?, ?)", [user, content, fileUrl], function(err) {
-      if (err) {
-        console.error('Error inserting message:', err);
-        socket.emit('errorMessage', { error: err.message });
-        return;
-      } else {
-        const newMessage = { id: this.lastID, user, content, fileUrl, timestamp: new Date().toISOString() };
-        io.emit('newMessage', newMessage);
-      }
-    });
-  });
+  
 
   // Handle user disconnect
   // Logs the disconnection and can be used for cleanup if needed

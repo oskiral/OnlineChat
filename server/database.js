@@ -25,12 +25,37 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS messages (
       message_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user TEXT NOT NULL,
+      sender_id INTEGER NOT NULL,
+      room_id INTEGER NOT NULL,
       content TEXT NOT NULL,
       fileUrl TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      delivered BOOLEAN DEFAULT 0,
+      read_at DATETIME NULL,
+      foreign key (sender_id) references users (user_id),
+      foreign key (room_id) references rooms (room_id)
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS rooms (
+      room_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_name TEXT NOT NULL,
+      is_group BOOLEAN DEFAULT 0,
+      created_by INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      foreign key (created_by) references users (user_id)
+    );`);
+
+    db.run(`
+    CREATE TABLE IF NOT EXISTS room_members (
+      room_member_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (room_id) REFERENCES rooms (room_id),
+      FOREIGN KEY (user_id) REFERENCES users (user_id)
+    );`);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS sessions (
