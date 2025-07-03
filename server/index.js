@@ -13,16 +13,13 @@ const { v4: uuidv4 } = require('uuid');
 
 const createRoomService = require('./services/room.js');
 const registerSocketHandlers = require("./sockets/index.js");
-const room = require('./services/room.js');
-const { error } = require('console');
 
-// Initialize the Express application
 const app = express();
 const port = process.env.PORT;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const roomService = createRoomService(db);
-const userSockets = new Map(); // zamiast sessionSockets
+const userSockets = new Map();
 
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -30,19 +27,37 @@ function authenticate(req, res, next) {
   if (!token) return res.status(401).json({ error: "No token provided" });
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err || !decoded?.username) {
+    if (err || !decoded?.username || !decoded?.sessionId) {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    // Opcjonalnie pobierz użytkownika z bazy (jeśli chcesz mieć dane w req.user)
-    db.get("SELECT * FROM users WHERE username = ?", [decoded.username], (err, user) => {
-      if (err || !user) return res.status(401).json({ error: "User not found" });
+    const currentIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
 
-      req.user = user;
-      next();
-    });
+    db.get(
+      `SELECT u.*, s.ip_address FROM users u 
+       JOIN sessions s ON u.user_id = s.user_id 
+       WHERE u.username = ? AND s.session_uuid = ? AND s.logout_time IS NULL`,
+      [decoded.username, decoded.sessionId],
+      (err, user) => {
+        if (err) return res.status(500).json({ error: "Database error" });
+        if (!user) return res.status(401).json({ error: "Session inactive or user not found" });
+
+        
+        if (user.ip_address !== currentIp) {
+          return res.status(401).json({ error: "IP address mismatch" });
+        }
+
+        req.user = user;
+        req.sessionId = decoded.sessionId;
+        next();
+      }
+    );
   });
 }
+
+
+
+
 function notifyUsersRoomCreated(io, userIds, room) {
   userIds.forEach(userId => {
     const socketId = getSocketIdForUser(userId); // Twoja funkcja mapująca userId → socketId
@@ -115,17 +130,17 @@ app.post('/upload', upload.single('file'), (req, res) => {
 // Uses multer to handle avatar uploads, updates the user's avatar in the database
 // and returns the file URL
 // Endpoint to upload avatar
-app.post('/uploadAvatar', uploadAvatar.single('avatar'), (req, res) => {
+app.post('/uploadAvatar', authenticate,  uploadAvatar.single('avatar'), (req, res) => {
     
-    if (err) return res.status(401).json({ error: 'Invalid token' });
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    if (!decoded || !decoded.username) return res.status(401).json({ error: 'Invalid token payload' });
-
-
-    // Construct the file URL based on the environment variable or default to localhost
-    const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
-    const fileUrl = `${baseUrl}/uploads/avatars/${req.file.filename}`;
-    const username = decoded.username;
+  
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  if (!req.user || !req.user.username) return res.status(401).json({ error: 'Invalid token payload' });
+  
+  // Construct the file URL based on the environment variable or default to localhost
+  const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
+  const fileUrl = `${baseUrl}/uploads/avatars/${req.file.filename}`;
+  const username = req.user.username;
+  
 
 
     // Check if the user exists in the database
@@ -270,7 +285,7 @@ app.post('/login', async (req, res) => {
         const token = jwt.sign({ username: user.username, sessionId: sessionUUID }, JWT_SECRET, { expiresIn: '1h' });
 
         
-        const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+        const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
         const userAgent = req.headers['user-agent'] || 'unknown';
 
 
@@ -311,7 +326,7 @@ app.post('/login', async (req, res) => {
 // Endpoint to remove avatar
 // Validates the JWT token, retrieves the user's avatar from the database,
 app.post('/removeAvatar', authenticate, (req, res) => {
-    const username = decoded.username;
+    const username = req.user.username;
 
     // Usuń plik starego awatara z serwera jeśli istnieje
     db.get("SELECT avatar FROM users WHERE username = ?", [username], (err, row) => {
@@ -341,31 +356,37 @@ app.post('/removeAvatar', authenticate, (req, res) => {
 
 // endpoint to log out
 app.post('/logout', authenticate, (req, res) => {
+  const sessionId = req.sessionId; // z authenticate
+  const username = req.user.username;
 
-    const sessionId = decoded.sessionId;
-    const username = decoded.username;
+  if (!sessionId || !username) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
-    db.run("UPDATE sessions SET logout_time = datetime('now') WHERE session_uuid = ?", [sessionId], (err) => {
-      if (err) return res.status(500).json({ error: 'Could not log out' });
-
-      const socketsSet = userSockets.get(username);
-
-      if (socketsSet) {
-        socketsSet.forEach(socket => {
-          socket.emit("forceLogout");
-
-          setTimeout(() => {
-            socketsSet.forEach(socket => socket.disconnect(true));
-            userSockets.delete(username);
-          }, 200);
-        });
-
-        userSockets.delete(username);
+  db.run(
+    "UPDATE sessions SET logout_time = datetime('now') WHERE session_uuid = ?",
+    [sessionId],
+    (err) => {
+      if (err) {
+        console.error('Error updating logout_time:', err);
+        return res.status(500).json({ error: 'Could not log out' });
       }
 
-      return res.status(200).json({ message: 'Logged out from all sessions' });
-    });
+      const socketsSet = userSockets.get(username);
+      if (socketsSet) {
+        socketsSet.forEach(socket => socket.emit("forceLogout"));
+        setTimeout(() => {
+          socketsSet.forEach(socket => socket.disconnect(true));
+          userSockets.delete(username);
+        }, 200);
+      }
+
+      return res.status(200).json({ message: 'Logged out from current session' });
+    }
+  );
 });
+
+
 
 
 
@@ -374,7 +395,12 @@ app.post('/logout', authenticate, (req, res) => {
 
 
 app.get('/me', authenticate, (req, res) => {
-    db.get("SELECT username, avatar FROM users WHERE username = ?", [decoded.username], (err, row) => {
+    const username = req.user?.username;
+    if (!username) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    db.get("SELECT username, avatar FROM users WHERE username = ?", [username], (err, row) => {
       if (err) return res.status(500).json({ error: 'Database error' });
       if (!row) return res.status(404).json({ error: 'User not found' });
       res.json(row);
@@ -415,7 +441,7 @@ io.use((socket, next) => {
 });
 
 
-app.get("/rooms", authenticate, (res, req) => {
+app.get("/rooms", authenticate, (req, res) => {
   const user = req.user;
   roomService.getUserRooms(user)
   .then((rooms) => res.json())
@@ -474,7 +500,7 @@ app.get("/users/search", authenticate, async (req, res) => {
   try {
     const users = await new Promise((resolve, reject) => {
       const sql = `SELECT user_id, username, avatar FROM users WHERE username LIKE ? LIMIT 20`;
-      db.all(sql, [`%${q}`], (err, rows) => {
+      db.all(sql, [`%${q}%`], (err, rows) => {
         if (err) return reject(err);
         resolve(rows);
       });
@@ -596,18 +622,6 @@ app.post("/friend-requests/reject", authenticate, async (req, res) => {
     res.status(500).json({error: "Server error"});
   }
 })
-
-
-io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
-  
-
-  // Handle user disconnect
-  // Logs the disconnection and can be used for cleanup if needed
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
 
 
 // Start the server
