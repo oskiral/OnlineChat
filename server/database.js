@@ -69,7 +69,31 @@ db.serialize(() => {
       FOREIGN KEY (user_id) REFERENCES users (user_id)
     );  
   `);
-
+  db.run(`
+    CREATE TABLE IF NOT EXISTS friendships (
+      friendship_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user1_id INTEGER NOT NULL,
+      user2_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user1_id, user2_id),
+      FOREIGN KEY(user1_id) REFERENCES users(user_id),
+      FOREIGN KEY(user2_id) REFERENCES users(user_id)
+    );
+    `);
+    db.run(`
+      CREATE TABLE IF NOT EXISTS friend_requests (
+        frequest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id INTEGER NOT NULL,
+        reciever_id INTEGER NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(sender_id, reciever_id),
+        FOREIGN KEY(sender_id) REFERENCES users(user_id),
+        FOREIGN KEY(reciever_id) REFERENCES users(user_id)
+      );
+      `);
+      // there are 3 states of status: pending, accepted, rejected
+      // sqlite doesnt support enum()
 });
 
 module.exports = db;

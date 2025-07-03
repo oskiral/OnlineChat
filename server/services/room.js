@@ -65,11 +65,28 @@ module.exports = function createRoomService(db) {
     );
   }
 
+  async function getDirectRoom(userId1, userId2) {
+    const rooms = await db.get(`
+    SELECT r.*
+    FROM rooms r
+    JOIN room_members rm1 ON r.room_id = rm1.room_id AND rm1.user_id = ?
+    JOIN room_members rm2 ON r.room_id = rm2.room_id AND rm2.user_id = ?
+    WHERE r.is_group = 0
+    AND (
+    SELECT COUNT(*) FROM room_members rm WHERE rm.room_id = r.room_id
+    ) = 2
+    LIMIT 1;
+    `, [userId1, userId2]);
+    return rooms.length > 0 ? rooms[0] : null;
+
+  }
+
   return {
     checkRoomAccess,
     getUserRooms,
     createRoom,
     addUserToRoom,
     isGroupRoom,
+    getDirectRoom
   };
 }

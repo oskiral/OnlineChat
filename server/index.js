@@ -13,6 +13,8 @@ const { v4: uuidv4 } = require('uuid');
 
 const createRoomService = require('./services/room.js');
 const registerSocketHandlers = require("./sockets/index.js");
+const room = require('./services/room.js');
+const { error } = require('console');
 
 // Initialize the Express application
 const app = express();
@@ -21,6 +23,34 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 const roomService = createRoomService(db);
 const userSockets = new Map(); // zamiast sessionSockets
+
+function authenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "No token provided" });
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err || !decoded?.username) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    // Opcjonalnie pobierz użytkownika z bazy (jeśli chcesz mieć dane w req.user)
+    db.get("SELECT * FROM users WHERE username = ?", [decoded.username], (err, user) => {
+      if (err || !user) return res.status(401).json({ error: "User not found" });
+
+      req.user = user;
+      next();
+    });
+  });
+}
+function notifyUsersRoomCreated(io, userIds, room) {
+  userIds.forEach(userId => {
+    const socketId = getSocketIdForUser(userId); // Twoja funkcja mapująca userId → socketId
+    if (socketId) {
+      io.to(socketId).emit('roomCreated', room);
+    }
+  });
+}
 
 
 // Middleware to parse JSON and enable CORS
@@ -86,17 +116,6 @@ app.post('/upload', upload.single('file'), (req, res) => {
 // and returns the file URL
 // Endpoint to upload avatar
 app.post('/uploadAvatar', uploadAvatar.single('avatar'), (req, res) => {
-
-
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-
-  // Verify the JWT token
-  // This checks if the token is valid and extracts the username from it
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-
-
     
     if (err) return res.status(401).json({ error: 'Invalid token' });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -157,7 +176,6 @@ app.post('/uploadAvatar', uploadAvatar.single('avatar'), (req, res) => {
         res.json({ fileUrl });
       });
     });
-  });
 });
 
 
@@ -292,13 +310,7 @@ app.post('/login', async (req, res) => {
 
 // Endpoint to remove avatar
 // Validates the JWT token, retrieves the user's avatar from the database,
-app.post('/removeAvatar', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(401).json({ error: 'Invalid token' });
-
+app.post('/removeAvatar', authenticate, (req, res) => {
     const username = decoded.username;
 
     // Usuń plik starego awatara z serwera jeśli istnieje
@@ -323,21 +335,12 @@ app.post('/removeAvatar', (req, res) => {
         res.json({ message: 'Avatar removed' });
       });
     });
-  });
 });
 
 
 
 // endpoint to log out
-app.post('/logout', (req, res) => {
-
-
-
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(401).json({ error: 'Invalid token' });
+app.post('/logout', authenticate, (req, res) => {
 
     const sessionId = decoded.sessionId;
     const username = decoded.username;
@@ -362,7 +365,6 @@ app.post('/logout', (req, res) => {
 
       return res.status(200).json({ message: 'Logged out from all sessions' });
     });
-  });
 });
 
 
@@ -371,26 +373,12 @@ app.post('/logout', (req, res) => {
 // Validates the JWT token and retrieves the user's username and avatar from the database
 
 
-app.get('/me', (req, res) => {
-
-
-
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(401).json({ error: 'Invalid token' });
-
-    // Check if the decoded token contains the username
-    // If not, return an error response
-
-    if (!decoded || !decoded.username) return res.status(401).json({ error: 'Invalid token payload' });
+app.get('/me', authenticate, (req, res) => {
     db.get("SELECT username, avatar FROM users WHERE username = ?", [decoded.username], (err, row) => {
       if (err) return res.status(500).json({ error: 'Database error' });
       if (!row) return res.status(404).json({ error: 'User not found' });
       res.json(row);
     });
-  });
 });
 
 
@@ -427,7 +415,187 @@ io.use((socket, next) => {
 });
 
 
+app.get("/rooms", authenticate, (res, req) => {
+  const user = req.user;
+  roomService.getUserRooms(user)
+  .then((rooms) => res.json())
+  .catch(err => {
+    console.log("Error fetching rooms of the user");
+    res.status(500).json({error: "Failed to fetch the rooms"})
+  })
+})
 
+app.post("/rooms", authenticate, async (res, req) => {
+  const {memberId, name} = req.body;
+  const user = req.user;
+
+  try {
+    if (memberId) {
+
+      // direct room
+      const existing = await roomService.getDirectRoom(user.id, memberId);
+      if (existing) {
+        notifyUsersRoomCreated(io, [user.id, memberId], existing);
+        return res.status(200).json(existing);
+      }
+
+      const roomId = await roomService.createRoom(null, user);
+      await roomService.addUserToRoom(user.id, roomId);
+      await roomService.addUserToRoom(memberId, roomId);
+
+      const newRoom = { room_id : roomId, is_group: 0};
+      notifyUsersRoomCreated(io, [user.id, memberId], newRoom);
+
+      return res.status(201).json(newRoom);
+    }
+    if (!name) {
+      return res.status(400).json({error: "Room nam required"});
+    }
+
+    const roomId = await roomService.createRoom(name, user);
+    await roomService.addUserToRoom(user.id, roomId);
+
+    const newRoom = {room_id: roomId, is_group: 1};
+    notifyUsersRoomCreated(io, [user.id], newRoom);
+
+    return res.status(201).json(newRoom);
+  } catch (err) {
+    console.error("Error creating room:",err);
+    return res.status(500).json({error: "Could not create room"});
+  }
+}) 
+
+app.get("/users/search", authenticate, async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.length < 2) {
+    return res.status(400).json({error: "Query too short"});
+  }
+
+  try {
+    const users = await new Promise((resolve, reject) => {
+      const sql = `SELECT user_id, username, avatar FROM users WHERE username LIKE ? LIMIT 20`;
+      db.all(sql, [`%${q}`], (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
+    });
+    res.json(users);
+  } catch (err) {
+    console.error('Search users error: ', err);
+    res.status(500).json({error: 'Server error'});
+  }
+})
+
+app.post('/friend-requests/send', authenticate, async (req, res) => {
+  const senderId = req.user.id;
+  const {recieverId} = req.body;
+
+  if (!recieverId || recieverId === senderId) {
+    return res.status(400).json({error: "Invalid recieverId"});
+  }
+
+  try {
+    const existing = await new Promise((resolve, reject) => {
+      const sql = `
+      SELECT * FROM friend_requests 
+      WHERE (sender_id = ? AND receiver_id = ?) 
+      OR (sender_id = ? AND receiver_id = ?)
+      `;
+      db.get(sql, [senderId, recieverId, recieverId, senderId], (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
+    });
+
+
+    if (existing) {
+      return res.status(400).json({error: "Friend requests already exists or you are already connected"})
+    };
+
+    await new Promise((resolve, reject) => {
+      const sql = `INSERT INTO friend_requests (sender_id, receiver_id, status) VALUES (?, ?, 'pending')`;
+      db.run(sql, [senderId, recieverId], function(err) {
+        if (err) return reject(err);
+        resolve(this.lastID);
+      });
+    });
+
+    res.json({success: true, message: "Friend request sent"})
+
+  } catch (err) {
+      console.error("Send friend request error: ", err);
+      res.status(500).json({error: "Server error"});
+  };
+});
+
+app.post("/friend-requests/accept", authenticate, async (req, res) => {
+  const recieverId = req.user.id;
+  const {senderId} = req.body;
+
+  try {
+    const updated = await new Promise((resolve,reject) => {
+    const sql = `
+      UPDATE friend_requests 
+      SET status = 'accepted' 
+      WHERE sender_id = ? AND receiver_id = ? AND status = 'pending'
+    `;
+
+    db.run(sql, [senderId, recieverId], function(err) {
+      if (err) resolve(err);
+      resolve(this.changes);
+    });
+    });
+
+    if (updated === 0) {
+      return res.status(400).json({ error: 'No pending friend request found' });
+    }
+
+    const [user1, user2] = senderId < recieverId ? [senderId, recieverId] : [recieverId, senderId];
+
+    await new Promise((resolve,reject) => {
+      const sql = `INSERT INTO friendships (user1_id, user2_id) VALUES (?, ?)`;
+      db.run(sql, [user1, user2], function(err) {
+        if (err) return reject(err);
+        resolve(this.lastID);
+      });
+    });
+
+    res.json({success: true, message:"Friend request accepted"});
+
+  } catch (err) {
+
+    console.error("Accept friend request error: ", err);
+    res.status(500).json({error: "Server error"});
+  }
+})
+
+app.post("/friend-requests/reject", authenticate, async (req, res) => {
+  const recieverId = req.user.id;
+  const {senderId} = req.body;
+
+  try {
+    const updated = await new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE friend_requests 
+        SET status = 'rejected' 
+        WHERE sender_id = ? AND receiver_id = ? AND status = 'pending'
+      `;
+      db.run(sql, [senderId, receiverId], function(err) {
+        if (err) return reject(err);
+        resolve(this.changes);
+      });
+    });
+
+    if (updated === 0) {
+      return res.status(400).json({error: "No pending friend request found"});
+    }
+
+    res.json({success: true, message: "Friend request rejected"});
+  } catch (err) {
+    console.error("Reject friend request error:", err);
+    res.status(500).json({error: "Server error"});
+  }
+})
 
 
 io.on('connection', (socket) => {
