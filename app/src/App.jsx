@@ -9,6 +9,7 @@ import { SocketProvider } from "../utils/socketProvider";
 
 function App() {
   const [user, setUser] = useState(null);
+  const [selectedChat, setSelectedChat] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -96,8 +97,8 @@ function App() {
         token={user.token}
         onUpload={(url) => setUser((prev) => ({ ...prev, avatar: url }))}
       />
-      <Chat user={user.username} token={user.token} onLogout={handleLogout}  setUser={setUser}/>
-      <FriendsPage />
+      <Chat user={user.username} token={user.token} onLogout={handleLogout}  setUser={setUser} selectedChat={selectedChat}/>
+      <FriendsPage onSelectedChat={(chat) => setSelectedChat(chat)} selectedChat={selectedChat}/>
     </SocketProvider>
   ) : (
     <Login onLogin={handleLogin} />

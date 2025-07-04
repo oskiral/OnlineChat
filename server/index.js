@@ -12,14 +12,13 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
 const createRoomService = require('./services/room.js');
-const registerSocketHandlers = require("./sockets/index.js");
+const {registerSocketHandlers, userSockets, getSocketIdsForUser} = require("./sockets/index.js");
 
 const app = express();
 const port = process.env.PORT;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const roomService = createRoomService(db);
-const userSockets = new Map();
 
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -60,7 +59,7 @@ function authenticate(req, res, next) {
 
 function notifyUsersRoomCreated(io, userIds, room) {
   userIds.forEach(userId => {
-    const socketId = getSocketIdForUser(userId); // Twoja funkcja mapująca userId → socketId
+    const socketId = getSocketIdsForUser(userId)[0]; // Twoja funkcja mapująca userId → socketId
     if (socketId) {
       io.to(socketId).emit('roomCreated', room);
     }
@@ -244,7 +243,7 @@ app.post('/register', async (req, res) => {
             if (err) {
               return res.status(500).json({ error: 'Could not create session' });
             }
-            const token = jwt.sign({ username, sessionId }, JWT_SECRET, { expiresIn: '1h' });
+            const token = jwt.sign({ username, sessionId, user_id: userId }, JWT_SECRET, { expiresIn: '1h' });
             res.status(201).json({ username, token });
         });
       });
@@ -282,7 +281,9 @@ app.post('/login', async (req, res) => {
 
 
         const sessionUUID = uuidv4();
-        const token = jwt.sign({ username: user.username, sessionId: sessionUUID }, JWT_SECRET, { expiresIn: '1h' });
+        console.log("test1: ", user.user_id)
+        const token = jwt.sign({ username: user.username, sessionId: sessionUUID, user_id: user.user_id }, JWT_SECRET, { expiresIn: '1h' });
+
 
         
         const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
@@ -408,39 +409,6 @@ app.get('/me', authenticate, (req, res) => {
 });
 
 
-// Middleware to authenticate WebSocket connections
-// Checks for a valid JWT token in the socket handshake
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  if (!token) return next(new Error("No token"));
-
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return next(new Error("Invalid token"));
-
-    const username = decoded.username;
-    socket.user = username;
-    socket.sessionId = decoded.sessionId;
-
-    if (!userSockets.has(username)) {
-      userSockets.set(username, new Set());
-    }
-    userSockets.get(username).add(socket);
-
-    socket.on('disconnect', () => {
-      const sockets = userSockets.get(username);
-      if (sockets) {
-        sockets.delete(socket);
-        if (sockets.size === 0) {
-          userSockets.delete(username);
-        }
-      }
-    });
-
-    next();
-  });
-});
-
-
 app.get("/rooms", authenticate, (req, res) => {
   const user = req.user;
   roomService.getUserRooms(user)
@@ -451,45 +419,58 @@ app.get("/rooms", authenticate, (req, res) => {
   })
 })
 
-app.post("/rooms", authenticate, async (res, req) => {
-  const {memberId, name} = req.body;
+// POST /rooms
+// If `memberId` is provided (and `is_group` is falsy), we treat it as a direct chat.
+// If `is_group` is true, we require a `name` and create a group room.
+app.post("/rooms", authenticate, async (req, res) => {
+  const { memberId, name, is_group } = req.body;
   const user = req.user;
+  console.log(user);
 
   try {
-    if (memberId) {
-
-      // direct room
-      const existing = await roomService.getDirectRoom(user.id, memberId);
+    // —— DIRECT CHAT ——
+    if (memberId && !is_group) {
+      // 1) Check for existing direct room between these two users
+      const existing = await roomService.getDirectRoom(user.user_id, memberId);
       if (existing) {
-        notifyUsersRoomCreated(io, [user.id, memberId], existing);
+        notifyUsersRoomCreated(io, [user.user_id, memberId], existing);
         return res.status(200).json(existing);
       }
 
-      const roomId = await roomService.createRoom(null, user);
-      await roomService.addUserToRoom(user.id, roomId);
+      // 2) Create the new direct room (no name, is_group = 0)
+      const roomId = await roomService.createRoom(null, user, false);
+      await roomService.addUserToRoom(user.user_id, roomId);
       await roomService.addUserToRoom(memberId, roomId);
 
-      const newRoom = { room_id : roomId, is_group: 0};
-      notifyUsersRoomCreated(io, [user.id, memberId], newRoom);
-
+      const newRoom = { room_id: roomId, is_group: 0, name: null };
+      notifyUsersRoomCreated(io, [user.user_id, memberId], newRoom);
       return res.status(201).json(newRoom);
     }
-    if (!name) {
-      return res.status(400).json({error: "Room nam required"});
+
+    // —— GROUP CHAT (future) ——
+    if (is_group) {
+      if (!name || !name.trim()) {
+        return res.status(400).json({ error: "Group name is required" });
+      }
+      // Create group room with name
+      const roomId = await roomService.createRoom(name.trim(), user, true);
+      await roomService.addUserToRoom(user.user_id, roomId);
+      // In future you’ll add extra members here, e.g. req.body.memberIds
+
+      const newRoom = { room_id: roomId, is_group: 1, name: name.trim() };
+      notifyUsersRoomCreated(io, [user.user_id], newRoom);
+      return res.status(201).json(newRoom);
     }
 
-    const roomId = await roomService.createRoom(name, user);
-    await roomService.addUserToRoom(user.id, roomId);
-
-    const newRoom = {room_id: roomId, is_group: 1};
-    notifyUsersRoomCreated(io, [user.id], newRoom);
-
-    return res.status(201).json(newRoom);
+    // —— INVALID REQUEST ——
+    res.status(400).json({
+      error: "Invalid payload: provide either memberId (direct) or is_group + name (group)",
+    });
   } catch (err) {
-    console.error("Error creating room:",err);
-    return res.status(500).json({error: "Could not create room"});
+    console.error("Error creating/fetching room:", err);
+    res.status(500).json({ error: "Could not create room" });
   }
-}) 
+});
 
 app.get("/users/search", authenticate, async (req, res) => {
   const { q } = req.query;

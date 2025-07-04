@@ -7,43 +7,42 @@ export function SocketProvider({ token, children, setUser }) {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    if (!token) {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-      }
-      return;
-    }
-
-    const newSocket = io("http://localhost:3001", {
-      auth: { token },
-    });
-
-    setSocket(newSocket);
-
-
-
-    // handles forceLogout
-    newSocket.on("forceLogout", () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("username");
-      setUser(null);
-      newSocket.disconnect();
-    });
-
-    // handles forceLogin
-    // newSocket.on("forceLogin", (userData) => {
-    //   console.log("SocketProvider got forceLogin event:", userData);
-    //   localStorage.setItem("token", userData.token);
-    //   localStorage.setItem("username", userData.username);
-    //   setUser(userData);
-    // });
-
-    return () => {
-      newSocket.disconnect();
+  if (!token) {
+    if (socket) {
+      socket.disconnect();
       setSocket(null);
-    };
-  }, [token]);
+    }
+    return;
+  }
+
+  const newSocket = io("http://localhost:3001", {
+    auth: { token },
+    autoConnect: true,
+  });
+
+  newSocket.on("connect", () => {
+    console.log("Socket connected:", newSocket.id);
+  });
+
+  newSocket.on("connect_error", (err) => {
+    console.error("Socket connection error:", err.message);
+  });
+
+  setSocket(newSocket);
+
+  newSocket.on("forceLogout", () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    setUser(null);
+    newSocket.disconnect();
+  });
+
+  return () => {
+    newSocket.disconnect();
+    setSocket(null);
+  };
+}, [token]);
+
 
 
   return (

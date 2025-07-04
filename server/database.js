@@ -22,40 +22,43 @@ db.serialize(() => {
     )
   `);
 
+  // messages now reference chat_id, which can be group or direct chat rooms
   db.run(`
     CREATE TABLE IF NOT EXISTS messages (
       message_id INTEGER PRIMARY KEY AUTOINCREMENT,
       sender_id INTEGER NOT NULL,
-      room_id INTEGER NOT NULL,
+      chat_id INTEGER NOT NULL,
       content TEXT NOT NULL,
       fileUrl TEXT,
       sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       delivered BOOLEAN DEFAULT 0,
       read_at DATETIME NULL,
-      foreign key (sender_id) references users (user_id),
-      foreign key (room_id) references rooms (room_id)
+      FOREIGN KEY (sender_id) REFERENCES users(user_id),
+      FOREIGN KEY (chat_id) REFERENCES rooms(room_id)
     )
   `);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS rooms (
       room_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      room_name TEXT NOT NULL,
+      room_name TEXT,
       is_group BOOLEAN DEFAULT 0,
       created_by INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      foreign key (created_by) references users (user_id)
-    );`);
+      FOREIGN KEY (created_by) REFERENCES users(user_id)
+    );
+  `);
 
-    db.run(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS room_members (
       room_member_id INTEGER PRIMARY KEY AUTOINCREMENT,
       room_id INTEGER NOT NULL,
       user_id INTEGER NOT NULL,
       joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (room_id) REFERENCES rooms (room_id),
-      FOREIGN KEY (user_id) REFERENCES users (user_id)
-    );`);
+      FOREIGN KEY (room_id) REFERENCES rooms(room_id),
+      FOREIGN KEY (user_id) REFERENCES users(user_id)
+    );
+  `);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -66,9 +69,10 @@ db.serialize(() => {
       logout_time DATETIME DEFAULT NULL,
       ip_address TEXT,
       user_agent TEXT,
-      FOREIGN KEY (user_id) REFERENCES users (user_id)
+      FOREIGN KEY (user_id) REFERENCES users(user_id)
     );  
   `);
+
   db.run(`
     CREATE TABLE IF NOT EXISTS friendships (
       friendship_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,21 +83,21 @@ db.serialize(() => {
       FOREIGN KEY(user1_id) REFERENCES users(user_id),
       FOREIGN KEY(user2_id) REFERENCES users(user_id)
     );
-    `);
-    db.run(`
-      CREATE TABLE IF NOT EXISTS friend_requests (
-        frequest_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender_id INTEGER NOT NULL,
-        receiver_id INTEGER NOT NULL,
-        status TEXT DEFAULT 'pending',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(sender_id, receiver_id),
-        FOREIGN KEY(sender_id) REFERENCES users(user_id),
-        FOREIGN KEY(receiver_id) REFERENCES users(user_id)
-      );
-      `);
-      // there are 3 states of status: pending, accepted, rejected
-      // sqlite doesnt support enum()
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS friend_requests (
+      frequest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id INTEGER NOT NULL,
+      receiver_id INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(sender_id, receiver_id),
+      FOREIGN KEY(sender_id) REFERENCES users(user_id),
+      FOREIGN KEY(receiver_id) REFERENCES users(user_id)
+    );
+  `);
+
 });
 
 module.exports = db;

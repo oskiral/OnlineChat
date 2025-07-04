@@ -1,84 +1,80 @@
 import "./Chat.css";
 import resizeImage from "../utils/resizeImage";
 import { useEffect, useState, useRef, useContext } from "react";
-import {SocketContext} from "../utils/socketProvider";
+import { SocketContext } from "../utils/socketProvider";
 
-export default function Chat({ user, token, onLogout, setUser }) {
+export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
-  const socket =  useContext(SocketContext);
+  const socket = useContext(SocketContext);
+  const [inputValue, setInputValue] = useState("");
 
-  useEffect(() => {
-  if (!socket) return;
-
-  socket.emit("getMessages");
-
-  socket.on("messages", (messages) => {
-    setMessages(messages);
-  });
-
-  socket.on("newMessage", (message) => {
-    setMessages((prev) => [...prev, message]);
-  });
-
-  socket.on("forceLogout", () => {
-    onLogout();
-  });
-
-  // socket.on("forceLogin", (userData) => {
-  //   console.log("Chat component got forceLogin event:", userData);
-  //   localStorage.setItem("token", userData.token);
-  //   localStorage.setItem("username", userData.username);
-  //   setUser(userData);
-  // });
-
-  return () => {
-    socket.off("newMessage");
-    socket.off("messages");
-    socket.off("forceLogout");
-    // socket.off("forceLogin");
-  };
+useEffect(() => {
+  console.log("Socket from context:", socket);
 }, [socket]);
 
-  
-  // handler for file input change
-  // This function resizes images if they are larger than 200px width
+  useEffect(() => {
+  if (!socket || !selectedChat) return;
+
+  // Prośba o pobranie wiadomości
+  socket.emit("getMessages", {
+    chatId: selectedChat.user.user_id,
+    isGroup: selectedChat.type === "group",
+  });
+
+  // Obsługa listy wiadomości (całości)
+  const handleMessages = (messages) => {
+    console.log("Received messages:", messages);
+    setMessages(messages);
+  };
+
+  // Obsługa pojedynczej nowej wiadomości
+  const handleNewMessage = (msg) => {
+    console.log("Received new message:", msg);
+    setMessages((prev) => [...prev, msg]);
+  };
+
+  socket.on("messages", handleMessages); // event z backendu dla listy
+  socket.on("newMessage", handleNewMessage); // pojedyncze wiadomości
+  socket.on("forceLogout", onLogout);
+
+  return () => {
+    socket.off("messages", handleMessages);
+    socket.off("newMessage", handleNewMessage);
+    socket.off("forceLogout", onLogout);
+  };
+}, [socket, selectedChat]);
+
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   async function handleFileChange(event) {
     const file = event.target.files[0];
     if (!file) return;
+
     if (file.type.startsWith("image/")) {
-        try {
-            const resized = await resizeImage(file, { maxWidth: 200 });
-            setSelectedFile(resized);
-        } catch (err) {
-            console.error("Image resize failed", err);
-            setSelectedFile(file); // fallback to original
-        }
+      try {
+        const resized = await resizeImage(file, { maxWidth: 200 });
+        setSelectedFile(resized);
+      } catch {
+        setSelectedFile(file);
+      }
     } else {
-        setSelectedFile(file); // for PDFs or other types
+      setSelectedFile(file);
     }
+
+    setFileName(file.name);
   }
 
   async function handleSendMessage() {
+    if (!socket || !selectedChat) return;
 
-    if (!socket) {
-      console.error("Socket is not connected");
-      return;
-    }
-    const btnSendMessage = document.getElementById("send-message-btn");
-    btnSendMessage.disabled = true;
-    btnSendMessage.textContent = "Sending...";
-
-    const input = document.querySelector('input[type="text"]');
-    const content = input.value.trim();
-
-    if (!content && !selectedFile) {
-      btnSendMessage.disabled = false;
-      btnSendMessage.textContent = "Send";
-      return;
-    }
+    const content = inputValue.trim();
+    if (!content && !selectedFile) return;
 
     let fileUrl = null;
 
@@ -95,80 +91,83 @@ export default function Chat({ user, token, onLogout, setUser }) {
         if (!response.ok) throw new Error("Upload failed");
 
         const data = await response.json();
-
         fileUrl = `http://localhost:3001${data.fileUrl}`;
-      } catch (error) {
-        console.error("Error uploading file:", error);
-        alert("File upload failed, please try again.");
-        btnSendMessage.disabled = false;
-        btnSendMessage.textContent = "Send";
+      } catch (err) {
+        alert("File upload failed.");
         return;
       }
     }
+    console.log("selectedChat on send:", selectedChat);
 
     socket.emit("newMessage", {
-      user: user.username || user,
+      chatId: selectedChat.room_id,
+      isGroup: selectedChat.type === "group",
+      user,
       content,
       fileUrl,
     });
 
-    input.value = "";
+    setInputValue("");
     setSelectedFile(null);
-
-    // Reset input file
-    const fileInput = document.querySelector('input[type="file"]');
-    if (fileInput) fileInput.value = "";
-
-    btnSendMessage.disabled = false;
-    btnSendMessage.textContent = "Send";
+    setFileName("");
   }
 
-  function handleKeyDown(event) {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    handleSendMessage();
+  function handleKeyDown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSendMessage();
+    }
   }
-}
+
+  if (!selectedChat) {
+    return (
+      <div className="chat-component">
+        <p>Select a friend to start chatting.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="chat-component">
       <div className="chat-header">
-        <h1>Realtime Chat</h1>
+        <h1>Chat with {selectedChat.user.username}</h1>
         <p>Stay connected with your friends!</p>
       </div>
-      
+
       {messages.length > 0 ? (
         <ul className="chat-messages">
           {messages.map((msg) => (
             <li key={msg.message_id}>
-              <strong>{msg.user}</strong>: {msg.content}{" "}
-              {msg.fileUrl && (
-                /\.(jpeg|jpg|gif|png)$/i.test(msg.fileUrl) ? (
-                  <img
-                    src={msg.fileUrl}
-                    alt="uploaded"
-                    style={{ maxWidth: "200px" }}
-                  />
+              <strong>{msg.username || msg.user || "Unknown"}</strong>: {msg.content}{" "}
+              {msg.fileUrl &&
+                (/\.(jpeg|jpg|gif|png)$/i.test(msg.fileUrl) ? (
+                  <img src={msg.fileUrl} alt="uploaded" style={{ maxWidth: "200px" }} />
                 ) : (
                   <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
                     {fileName || "Download file"}
                   </a>
-                )
-              )}
+                ))}
             </li>
           ))}
           <div ref={messagesEndRef} />
         </ul>
       ) : (
-        <p className="no-messages">No messages yet. Start the conversation!</p>
+        <p className="no-messages">No messages yet.</p>
       )}
+
       <div className="chat-input">
-        <input type="text" placeholder="Type your message..." onKeyDown={handleKeyDown} />
-         <div className="file-input-wrapper">
-            <label htmlFor="file-upload" className="custom-file-upload">
-                Chose File
-            </label>
-            <input id="file-upload" type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
+        <input
+          type="text"
+          placeholder="Type your message..."
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <div className="file-input-wrapper">
+          <label htmlFor="file-upload" className="custom-file-upload">
+            Choose File
+          </label>
+          <input id="file-upload" type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
         </div>
         <button id="send-message-btn" onClick={handleSendMessage}>
           Send

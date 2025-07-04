@@ -15,7 +15,7 @@ module.exports = function createRoomService(db) {
   async function checkRoomAccess(roomId, user) {
     return await get(
       "SELECT * FROM room_members WHERE room_id = ? AND user_id = ?",
-      [roomId, user.id]
+      [roomId, user.user_id]
     );
   }
 
@@ -29,7 +29,7 @@ module.exports = function createRoomService(db) {
        FROM rooms r 
        JOIN room_members rm ON rm.room_id = r.id 
        WHERE rm.user_id = ?`,
-      [user.id]
+      [user.user_id]
     );
   }
 
@@ -37,12 +37,16 @@ module.exports = function createRoomService(db) {
    * Tworzy nowy pokój i zwraca jego ID.
    */
   async function createRoom(name, user) {
-    const result = await run(
-      "INSERT INTO rooms (name, creator_id) VALUES (?, ?)",
-      [name, user.id]
+    return new Promise((resolve, reject) => {
+    db.run(
+      "INSERT INTO rooms (room_name, created_by) VALUES (?, ?)",
+      [name, user.user_id],
+      function (err) {
+        if (err) return reject(err);
+        resolve(this.lastID);   // <-- here you grab the new row’s ID
+      }
     );
-    // sqlite3 w trybie promisified zwraca obiekt { lastID, changes }
-    return result.lastID;
+  });
   }
 
   /**
@@ -64,22 +68,33 @@ module.exports = function createRoomService(db) {
       [roomId]
     );
   }
-
   async function getDirectRoom(userId1, userId2) {
-    const rooms = await db.get(`
-    SELECT r.*
-    FROM rooms r
-    JOIN room_members rm1 ON r.room_id = rm1.room_id AND rm1.user_id = ?
-    JOIN room_members rm2 ON r.room_id = rm2.room_id AND rm2.user_id = ?
-    WHERE r.is_group = 0
-    AND (
-    SELECT COUNT(*) FROM room_members rm WHERE rm.room_id = r.room_id
-    ) = 2
-    LIMIT 1;
-    `, [userId1, userId2]);
-    return rooms.length > 0 ? rooms[0] : null;
+      const sql = `
+        SELECT r.*
+        FROM rooms r
+          JOIN room_members rm1 ON r.room_id = rm1.room_id AND rm1.user_id = ?
+          JOIN room_members rm2 ON r.room_id = rm2.room_id AND rm2.user_id = ?
+        WHERE r.is_group = 0
+          AND (
+            SELECT COUNT(*) 
+            FROM room_members rm 
+            WHERE rm.room_id = r.room_id
+          ) = 2
+        LIMIT 1;
+      `;
 
-  }
+      // Wrap db.all in a Promise:
+      const rows = await new Promise((resolve, reject) => {
+        db.all(sql, [userId1, userId2], (err, rows) => {
+          if (err) return reject(err);
+          resolve(rows);
+        });
+      });
+
+      console.log("found rooms:", rows.length);
+      return rows.length > 0 ? rows[0] : null;
+    }
+
 
   return {
     checkRoomAccess,

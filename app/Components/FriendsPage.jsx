@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import FriendSearch from "./FriendSearch";
 import FriendList from "./FriendList";
 
-export default function FriendsPage() {
+export default function FriendsPage({onSelectedChat, selectedChat}) {
   const token = localStorage.getItem("token"); // lub inny sposób pobrania JWT
   const [refreshList, setRefreshList] = useState(false);
 
@@ -16,7 +16,7 @@ export default function FriendsPage() {
       <FriendSearch token={token} onFriendAdded={handleFriendAdded} />
       <h2>Your Friends</h2>
       {/* Przeładuj listę po dodaniu */}
-      <FriendList key={refreshList} token={token} />
+      <FriendList key={refreshList} token={token} onSelectedChat={onSelectedChat} selectedChat={selectedChat} />
     </div>
   );
 }
