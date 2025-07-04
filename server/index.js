@@ -257,7 +257,6 @@ app.post('/register', async (req, res) => {
 // Validates user credentials and returns a JWT token
 app.post('/login', async (req, res) => {
 
-    console.log("logged");
     const { username, password } = req.body;
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
@@ -281,7 +280,6 @@ app.post('/login', async (req, res) => {
 
 
         const sessionUUID = uuidv4();
-        console.log("test1: ", user.user_id)
         const token = jwt.sign({ username: user.username, sessionId: sessionUUID, user_id: user.user_id }, JWT_SECRET, { expiresIn: '1h' });
 
 
@@ -425,7 +423,6 @@ app.get("/rooms", authenticate, (req, res) => {
 app.post("/rooms", authenticate, async (req, res) => {
   const { memberId, name, is_group } = req.body;
   const user = req.user;
-  console.log(user);
 
   try {
     // —— DIRECT CHAT ——
@@ -493,6 +490,25 @@ app.get("/users/search", authenticate, async (req, res) => {
   }
 })
 
+app.get("/friend-requests", authenticate, (req, res) => {
+  const userId = req.user.user_id;
+
+  const sql = `
+    SELECT fr.sender_id, u.username, u.avatar
+    FROM friend_requests fr
+    JOIN users u ON fr.sender_id = u.user_id
+    WHERE fr.receiver_id = ? AND fr.status = 'pending'
+  `;
+
+  db.all(sql, [userId], (err, rows) => {
+    if (err) {
+      console.error("Error fetching friend requests:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(rows);
+  });
+});
+
 app.get("/friends", authenticate, async (req, res) => {
   const userId = req.user.user_id;
 
@@ -558,13 +574,12 @@ app.post('/friend-requests/send', authenticate, async (req, res) => {
     if (recieverId === senderId) {
       return res.status(400).json({ error: "Cannot add yourself as friend" });
     }
-
-    // Sprawdź czy zaproszenie lub znajomość już istnieje
     const existing = await new Promise((resolve, reject) => {
       const sql = `
         SELECT * FROM friend_requests 
         WHERE (sender_id = ? AND receiver_id = ?) 
-          OR (sender_id = ? AND receiver_id = ?)
+           OR (sender_id = ? AND receiver_id = ?)
+        LIMIT 1
       `;
       db.get(sql, [senderId, recieverId, recieverId, senderId], (err, row) => {
         if (err) return reject(err);
@@ -573,27 +588,43 @@ app.post('/friend-requests/send', authenticate, async (req, res) => {
     });
 
     if (existing) {
-      return res.status(400).json({ error: "Friend request already exists or you are already connected" });
+      if (existing.status === "pending" || existing.status === "accepted") {
+        return res.status(400).json({ error: "Friend request already exists or users are already friends" });
+      }
+
+      if (existing.status === "rejected") {
+        // Aktualizuj status z 'rejected' na 'pending'
+        const updated = await new Promise((resolve, reject) => {
+          const sql = `
+            UPDATE friend_requests
+            SET sender_id = ?, receiver_id = ?, status = 'pending', created_at = datetime('now')
+            WHERE frequest_id = ?
+          `;
+          db.run(sql, [senderId, recieverId, existing.frequest_id], function (err) {
+            if (err) return reject(err);
+            resolve(this.changes);
+          });
+        });
+
+        return res.json({ success: true, message: "Friend request re-sent" });
+      }
     }
 
-    // Dodaj zaproszenie
-    await new Promise((resolve, reject) => {
-      const sql = `INSERT INTO friend_requests (sender_id, receiver_id, status) VALUES (?, ?, 'pending')`;
-      db.run(sql, [senderId, recieverId], function(err) {
-        if (err) return reject(err);
-        resolve(this.lastID);
-      });
-    });
+    // Jeśli nie ma żadnego zaproszenia, utwórz nowe
+    await db.run(
+      `INSERT INTO friend_requests (sender_id, receiver_id) VALUES (?, ?)`,
+      [senderId, recieverId]
+    );
 
-    res.json({ success: true, message: "Friend request sent" });
-
+    res.status(201).json({ success: true, message: "Friend request sent" });
   } catch (err) {
-    console.error("Send friend request error:", err);
-  }})
+    console.error("Error sending friend request:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+})
 
 
 app.post("/friend-requests/accept", authenticate, async (req, res) => {
-  console.log(req.body);
   const recieverId = req.user.user_id;
   const {senderId} = req.body;
 
@@ -635,7 +666,7 @@ app.post("/friend-requests/accept", authenticate, async (req, res) => {
 })
 
 app.post("/friend-requests/reject", authenticate, async (req, res) => {
-  const recieverId = req.user.id;
+  const receiverId = req.user.user_id;
   const {senderId} = req.body;
 
   try {
@@ -662,6 +693,12 @@ app.post("/friend-requests/reject", authenticate, async (req, res) => {
   }
 })
 
+
+app.post("/test-read", (req, res) => {
+  const { chatId, userId } = req.body;
+  io.to(String(chatId)).emit("messagesRead", { chatId, userId });
+  res.json({ success: true });
+});
 
 // Start the server
 server.listen(port, () => {

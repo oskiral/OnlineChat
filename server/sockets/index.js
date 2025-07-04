@@ -4,6 +4,7 @@ const userSockets = new Map();
 
 const handleGetMessages = require("./handlers/handleGetMessages");
 const handleNewMessages = require("./handlers/handleNewMessage");
+const handleMarkMessagesRead = require("./handlers/handleMarkMessagesRead");
 
 function getSocketIdsForUser(userId) {
   const sockets = userSockets.get(userId);
@@ -60,6 +61,7 @@ function registerSocketHandlers(io, db) {
     // Rejestruj obsługę zdarzeń
     handleGetMessages(io, socket, db);
     handleNewMessages(io, socket, db);
+    handleMarkMessagesRead(io, socket, db);
   });
 };
 

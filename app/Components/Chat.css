@@ -1,3 +1,9 @@
+.read-indicator {
+  position: absolute;
+  bottom: 70px;
+  right: 10px;
+}
+
 .chat-component {
   display: flex;
   flex-direction: column;
@@ -9,6 +15,7 @@
   color: #333;
   align-items: center;
   margin-top: 50px;
+  position: relative;
 }
 .chat-header {
   background-color: #4CAF50;
@@ -42,7 +49,7 @@
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  margin-right: 10px;
+  margin-right: 5px;
 }
 .chat-input button {
   padding: 10px 15px;
@@ -59,4 +66,58 @@
   margin-bottom: 10px;
   padding: 10px;
   border-radius: 4px;
+}
+.file-upload-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: sans-serif;
+}
+
+.file-upload-input {
+  /* Hidden but accessible */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.file-upload-btn {
+  background-color: #4caf50;
+  color: #fff;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+  margin-right: 5px;
+  height: 50px;
+  width: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 15px;
+}
+
+.file-upload-btn:hover {
+  background-color: #45a049;
+}
+
+.file-upload-name {
+  font-size: 0.9em;
+  color: #555;
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  width: 100%;
+}
+.file-input-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }

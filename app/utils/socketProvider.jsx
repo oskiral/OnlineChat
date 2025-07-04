@@ -20,10 +20,7 @@ export function SocketProvider({ token, children, setUser }) {
     autoConnect: true,
   });
 
-  newSocket.on("connect", () => {
-    console.log("Socket connected:", newSocket.id);
-  });
-
+  
   newSocket.on("connect_error", (err) => {
     console.error("Socket connection error:", err.message);
   });

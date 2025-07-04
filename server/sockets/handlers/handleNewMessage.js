@@ -1,9 +1,11 @@
 // sockets/handlers/handleNewMessage.js
 module.exports = (io, socket, db) => {
-  socket.on("newMessage", ({ chatId, content }) => {
-    if (!chatId || !content) {
-        return socket.emit("error", { msg: "chatId and content are required" });
+  socket.on("newMessage", ({ chatId, content, fileUrl }) => {
+    console.log("HANDLER");
+    if (!chatId || (!content && !fileUrl)) {
+        return socket.emit("error", { msg: "chatId and content or file are required" });
     }
+    const updatedFileUrl = fileUrl || null;
     
     const userId = socket.user_id;
     if (!userId) {
@@ -12,10 +14,10 @@ module.exports = (io, socket, db) => {
     
     // 1. Wstaw wiadomość i przechwyć lastID
     const insertSql = `
-    INSERT INTO messages (chat_id, sender_id, content, sent_at)
-    VALUES (?, ?, ?, datetime('now'))
+    INSERT INTO messages (chat_id, sender_id, content, sent_at, fileUrl)
+    VALUES (?, ?, ?, datetime('now'), ?)
     `;
-    db.run(insertSql, [chatId, userId, content], function(err) {
+    db.run(insertSql, [chatId, userId, content, updatedFileUrl], function(err) {
         if (err) {
             console.error("DB insert error:", err);
             return socket.emit("error", { msg: "DB insert error" });
@@ -37,6 +39,7 @@ module.exports = (io, socket, db) => {
                     user_id: userId,
                     username,
                     content,
+                    fileUrl,
                     sent_at: new Date().toISOString(),
                 };
                 

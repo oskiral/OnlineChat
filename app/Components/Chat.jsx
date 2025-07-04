@@ -7,45 +7,74 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [messagesRead, setMessagesRead] = useState(false);
   const messagesEndRef = useRef(null);
   const socket = useContext(SocketContext);
   const [inputValue, setInputValue] = useState("");
 
-useEffect(() => {
-  console.log("Socket from context:", socket);
-}, [socket]);
-
+  // Debug all incoming socket events
   useEffect(() => {
-  if (!socket || !selectedChat) return;
+    if (!socket) return;
+    const logger = (eventName, ...args) =>
+      console.log("[Socket event]", eventName, args);
+    socket.onAny(logger);
+    return () => {
+      socket.offAny(logger);
+    };
+  }, [socket]);
 
-  // Prośba o pobranie wiadomości
-  socket.emit("getMessages", {
-    chatId: selectedChat.user.user_id,
-    isGroup: selectedChat.type === "group",
-  });
+  // Fetch & render messages, then mark as read
+  useEffect(() => {
+    if (!socket || !selectedChat) return;
+    setMessagesRead(false);
 
-  // Obsługa listy wiadomości (całości)
-  const handleMessages = (messages) => {
-    console.log("Received messages:", messages);
-    setMessages(messages);
-  };
+    // 1) Request history (server will join room)
+    socket.emit("getMessages", {
+      chatId: selectedChat.room_id,
+      isGroup: selectedChat.type === "group",
+    });
 
-  // Obsługa pojedynczej nowej wiadomości
-  const handleNewMessage = (msg) => {
-    console.log("Received new message:", msg);
-    setMessages((prev) => [...prev, msg]);
-  };
+    // 2) Handle list
+    const handleMessages = (msgs) => {
+      console.log("messages list:", msgs);
+      setMessages(msgs);
 
-  socket.on("messages", handleMessages); // event z backendu dla listy
-  socket.on("newMessage", handleNewMessage); // pojedyncze wiadomości
-  socket.on("forceLogout", onLogout);
+      // 3) Now mark them as read
+      console.log("Emitting markMessagesRead after messages");
+      socket.emit("markMessagesRead", { chatId: selectedChat.room_id });
+    };
 
-  return () => {
-    socket.off("messages", handleMessages);
-    socket.off("newMessage", handleNewMessage);
-    socket.off("forceLogout", onLogout);
-  };
-}, [socket, selectedChat]);
+    // 4) Handle new single message
+    const handleNewMessage = (msg) => {
+      console.log("newMessage:", msg);
+      setMessages((prev) => [...prev, msg]);
+    };
+
+    // 5) Handle read-confirm back from server
+    const handleMessagesRead = ({ chatId, userId }) => {
+      console.log("Triggered messagesRead for chat", chatId, "by user", userId);
+  
+        // Sprawdź czy to dotyczy aktualnego czatu
+        if (
+          String(chatId) === String(selectedChat.room_id) &&
+          userId !== user.user_id // tylko jeśli to inny user
+        ) {
+          setMessagesRead(true);
+        }
+    };
+
+    socket.on("messages", handleMessages);
+    socket.on("newMessage", handleNewMessage);
+    socket.on("messagesRead", handleMessagesRead);
+    socket.on("forceLogout", onLogout);
+
+    return () => {
+      socket.off("messages", handleMessages);
+      socket.off("newMessage", handleNewMessage);
+      socket.off("messagesRead", handleMessagesRead);
+      socket.off("forceLogout", onLogout);
+    };
+  }, [socket, selectedChat, onLogout]);
 
 
   useEffect(() => {
@@ -97,8 +126,8 @@ useEffect(() => {
         return;
       }
     }
-    console.log("selectedChat on send:", selectedChat);
 
+    console.log("wiadomosc emit", fileUrl);
     socket.emit("newMessage", {
       chatId: selectedChat.room_id,
       isGroup: selectedChat.type === "group",
@@ -129,6 +158,8 @@ useEffect(() => {
 
   return (
     <div className="chat-component">
+      {messagesRead && <div className="read-indicator">Read by other user</div>}
+      
       <div className="chat-header">
         <h1>Chat with {selectedChat.user.username}</h1>
         <p>Stay connected with your friends!</p>
@@ -164,10 +195,8 @@ useEffect(() => {
           onKeyDown={handleKeyDown}
         />
         <div className="file-input-wrapper">
-          <label htmlFor="file-upload" className="custom-file-upload">
-            Choose File
-          </label>
-          <input id="file-upload" type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
+            <input type="file" id="fileUpload" accept="image/*,application/pdf" className="file-upload-input" onChange={handleFileChange} />
+            <label htmlFor="fileUpload" className="file-upload-btn">{selectedFile ? "File Ready" : "Choose File"}</label>
         </div>
         <button id="send-message-btn" onClick={handleSendMessage}>
           Send

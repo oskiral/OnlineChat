@@ -4,8 +4,8 @@ module.exports = (io, socket, db) => {
       return socket.emit("error", { msg: "chatId is required" });
     }
 
-    socket.join(String(chatId));
-    console.log("joined");
+     socket.join(String(chatId));
+        console.log(`Socket ${socket.id} joined room ${chatId}`);
     try {
         const messages = await new Promise((resolve, reject) => {
             db.all(

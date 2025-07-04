@@ -3,6 +3,7 @@ import Chat from "../Components/Chat";
 import Login from "../Components/Login";
 import UserPanel from "../Components/UserPanel";
 import FriendsPage from "../Components/FriendsPage";
+import FriendRequests from "../Components/FriendRequests";
 
 import { SocketProvider } from "../utils/socketProvider";
 
@@ -46,9 +47,6 @@ function App() {
     fetchUser();
   }, []);
 
-  useEffect(() => {
-    console.log("User state updated:", user);
-  }, [user]);
 
   // Handle login by storing user data in local storage and updating state
   // This function is called from the Login component when the user successfully logs in.
@@ -82,6 +80,7 @@ function App() {
 
   function handleLogout() {
     setUser(null);
+    setSelectedChat(null);
     localStorage.removeItem("token");
     localStorage.removeItem("username");
   }
@@ -90,15 +89,22 @@ function App() {
 
   return user ? (
     <SocketProvider token={user.token} username={user.username} setUser={setUser}>
-      <UserPanel
-        user={user}
-        setUser={setUser}
-        onLogout={handleLogout}
-        token={user.token}
-        onUpload={(url) => setUser((prev) => ({ ...prev, avatar: url }))}
-      />
-      <Chat user={user.username} token={user.token} onLogout={handleLogout}  setUser={setUser} selectedChat={selectedChat}/>
-      <FriendsPage onSelectedChat={(chat) => setSelectedChat(chat)} selectedChat={selectedChat}/>
+      <div style={{display : "flex"}}>
+        <div>
+          <FriendsPage onSelectedChat={(chat) => setSelectedChat(chat)} selectedChat={selectedChat}/>
+          <FriendRequests token={user.token} />
+        </div>
+        <div>
+          <UserPanel
+            user={user}
+            setUser={setUser}
+            onLogout={handleLogout}
+            token={user.token}
+            onUpload={(url) => setUser((prev) => ({ ...prev, avatar: url }))}
+          />
+          <Chat user={user.username} token={user.token} onLogout={handleLogout}  setUser={setUser} selectedChat={selectedChat}/>
+        </div>
+      </div>
     </SocketProvider>
   ) : (
     <Login onLogin={handleLogin} />

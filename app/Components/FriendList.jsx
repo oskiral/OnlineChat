@@ -79,7 +79,7 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
                 : "")
             }
           >
-            <img src={f.avatar || "/default-avatar.png"} alt="" />
+            <img src={f.avatar || "../media/default.jpg"} alt="" />
             <span>{f.username}</span>
           </li>
         ))}
