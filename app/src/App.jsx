@@ -74,7 +74,7 @@ function App() {
       const data = await res.json();
       setUser({ ...data, token: userData.token });
     } catch {
-      setUser({ username: userData.username, token: userData.token, avatar: null });
+      setUser({ user_id: userData.user_id, username: userData.username, token: userData.token, avatar: null });
     }
   }
 
@@ -102,7 +102,7 @@ function App() {
             token={user.token}
             onUpload={(url) => setUser((prev) => ({ ...prev, avatar: url }))}
           />
-          <Chat user={user.username} token={user.token} onLogout={handleLogout}  setUser={setUser} selectedChat={selectedChat}/>
+          <Chat user={user} token={user.token} onLogout={handleLogout}  setUser={setUser} selectedChat={selectedChat}/>
         </div>
       </div>
     </SocketProvider>

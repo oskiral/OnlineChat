@@ -26,55 +26,38 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
   // Fetch & render messages, then mark as read
   useEffect(() => {
     if (!socket || !selectedChat) return;
-    setMessagesRead(false);
 
-    // 1) Request history (server will join room)
-    socket.emit("getMessages", {
-      chatId: selectedChat.room_id,
-      isGroup: selectedChat.type === "group",
-    });
+    // 1) Pobierz historię
+    socket.emit("getMessages", { chatId: selectedChat.room_id });
 
-    // 2) Handle list
+    // 2) Gdy dostaniesz historię, wywołaj markMessagesRead
     const handleMessages = (msgs) => {
-      console.log("messages list:", msgs);
       setMessages(msgs);
-
-      // 3) Now mark them as read
-      console.log("Emitting markMessagesRead after messages");
       socket.emit("markMessagesRead", { chatId: selectedChat.room_id });
     };
 
-    // 4) Handle new single message
-    const handleNewMessage = (msg) => {
-      console.log("newMessage:", msg);
-      setMessages((prev) => [...prev, msg]);
-    };
+    // 3) Nowe pojedyncze wiadomości
+    const handleNew = (msg) => setMessages((prev) => [...prev, msg]);
 
-    // 5) Handle read-confirm back from server
-    const handleMessagesRead = ({ chatId, userId }) => {
-      console.log("Triggered messagesRead for chat", chatId, "by user", userId);
-  
-        // Sprawdź czy to dotyczy aktualnego czatu
-        if (
-          String(chatId) === String(selectedChat.room_id) &&
-          userId !== user.user_id // tylko jeśli to inny user
-        ) {
-          setMessagesRead(true);
-        }
+    // 4) Ktoś inny potwierdził odczyt
+    const handleRead = ({ chatId }) => {
+      console.log(chatId, "- ", selectedChat.room_id);
+      if (String(chatId) === String(selectedChat.room_id)) {
+        setMessagesRead(true);
+      }
     };
 
     socket.on("messages", handleMessages);
-    socket.on("newMessage", handleNewMessage);
-    socket.on("messagesRead", handleMessagesRead);
-    socket.on("forceLogout", onLogout);
+    socket.on("newMessage", handleNew);
+    socket.on("messagesRead", handleRead);
 
     return () => {
       socket.off("messages", handleMessages);
-      socket.off("newMessage", handleNewMessage);
-      socket.off("messagesRead", handleMessagesRead);
-      socket.off("forceLogout", onLogout);
+      socket.off("newMessage", handleNew);
+      socket.off("messagesRead", handleRead);
     };
-  }, [socket, selectedChat, onLogout]);
+  }, [socket, selectedChat]);
+
 
 
   useEffect(() => {
