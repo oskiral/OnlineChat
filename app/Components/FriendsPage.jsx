@@ -11,12 +11,13 @@ export default function FriendsPage({onSelectedChat, selectedChat}) {
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: "auto", padding: 20 }}>
-      <h2>Add Friend</h2>
-      <FriendSearch token={token} onFriendAdded={handleFriendAdded} />
-      <h2>Your Friends</h2>
-      {/* Przeładuj listę po dodaniu */}
-      <FriendList key={refreshList} token={token} onSelectedChat={onSelectedChat} selectedChat={selectedChat} />
-    </div>
+    // <div style={{ maxWidth: 600, margin: "auto", padding: 20 }}>
+    //   <h2>Add Friend</h2>
+    //   <FriendSearch token={token} onFriendAdded={handleFriendAdded} />
+    //   <h2>Your Friends</h2>
+    //   {/* Przeładuj listę po dodaniu */}
+    //   <FriendList key={refreshList} token={token} onSelectedChat={onSelectedChat} selectedChat={selectedChat} />
+    // </div>
+      <></>
   );
 }

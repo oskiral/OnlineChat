@@ -4,6 +4,8 @@ import Login from "../Components/Login";
 import UserPanel from "../Components/UserPanel";
 import FriendsPage from "../Components/FriendsPage";
 import FriendRequests from "../Components/FriendRequests";
+import Sidebar from "../Components/Sidebar";
+import AppLayout from "../Components/AppLayout";
 
 import { SocketProvider } from "../utils/socketProvider";
 
@@ -89,7 +91,14 @@ function App() {
 
   return user ? (
     <SocketProvider token={user.token} username={user.username} setUser={setUser}>
-      <div style={{display : "flex"}}>
+      <AppLayout
+        user={user}
+        setUser={setUser}
+        onLogout={handleLogout}
+        onSelectedChat={(chat) => setSelectedChat(chat)}
+        selectedChat={selectedChat}
+      />
+      {/* <div style={{display : "flex"}}>
         <div>
           <FriendsPage onSelectedChat={(chat) => setSelectedChat(chat)} selectedChat={selectedChat}/>
           <FriendRequests token={user.token} />
@@ -104,7 +113,8 @@ function App() {
           />
           <Chat user={user} token={user.token} onLogout={handleLogout}  setUser={setUser} selectedChat={selectedChat}/>
         </div>
-      </div>
+      </div> */}
+      
     </SocketProvider>
   ) : (
     <Login onLogin={handleLogin} />

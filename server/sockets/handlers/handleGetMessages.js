@@ -7,7 +7,6 @@ module.exports = (io, socket, db) => {
 
     // Dołącz TEN socket do pokoju
     socket.join(String(chatId));
-    console.log(`Socket ${socket.id} joined room ${chatId}`);
 
     // POBIERZ wiadomości z bazy
     try {

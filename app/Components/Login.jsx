@@ -40,42 +40,74 @@ export default function Login({ onLogin }) {
     }
 
     return (
+        // <form onSubmit={handleSubmit} className="login-form">
+        //     <div className="login-header">
+        //         <h2>{isRegistering ? "Register" : "Login"}</h2>
+        //         <p>Please enter your credentials to continue</p>
+        //     </div>
+        //     <div className="login-input">
+        //     <input
+        //         type="text"
+        //         placeholder="Enter your username"
+        //         value={username}
+        //         onChange={(e) => setUsername(e.target.value)}
+        //     />
+        //     <input
+        //         type="password"
+        //         placeholder="Enter your password"
+        //         value={password}
+        //         onChange={(e) => setPassword(e.target.value)}
+        //     />
+        //     <button type="submit">
+        //         {isRegistering ? "Register" : "Login"}
+        //     </button>
+        //     {error && <p className="error">{error}</p>}
+        //     <p className="switch-auth">
+        //     {isRegistering ? (
+        //         <>
+        //         Already have an account?{" "}
+        //         <span onClick={() => setIsRegistering(false)}>Login</span>
+        //         </>
+        //     ) : (
+        //         <>
+        //         Don't have an account?{" "}
+        //         <span onClick={() => setIsRegistering(true)}>Register</span>
+        //         </>
+        //     )}
+        //     </p>
+        // </div>
+        // </form>
+        <div className="login-container">
+      <div className="login-card">
+        <h1 className="login-title">Welcome Back</h1>
+        <p className="login-subtitle">Log in to continue chatting</p>
+
         <form onSubmit={handleSubmit} className="login-form">
-            <div className="login-header">
-                <h2>{isRegistering ? "Register" : "Login"}</h2>
-                <p>Please enter your credentials to continue</p>
-            </div>
-            <div className="login-input">
-            <input
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-            />
-            <input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-            />
-            <button type="submit">
-                {isRegistering ? "Register" : "Login"}
-            </button>
-            {error && <p className="error">{error}</p>}
-            <p className="switch-auth">
-            {isRegistering ? (
-                <>
-                Already have an account?{" "}
-                <span onClick={() => setIsRegistering(false)}>Login</span>
-                </>
-            ) : (
-                <>
-                Don't have an account?{" "}
-                <span onClick={() => setIsRegistering(true)}>Register</span>
-                </>
-            )}
-            </p>
-        </div>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="login-input"
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="login-input"
+          />
+          <button type="submit" className="login-button">
+            Log In
+          </button>
         </form>
+
+        {/* <div className="login-footer">
+          <a href="#" className="login-link">Forgot Password?</a>
+          <span className="login-separator">|</span>
+          <a href="#" className="login-link">Sign Up</a>
+        </div> */}
+      </div>
+    </div>
     );
 }

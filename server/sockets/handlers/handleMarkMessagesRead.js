@@ -4,8 +4,6 @@ module.exports = (io, socket, db) => {
     const userId = socket.user_id;
     if (!chatId || !userId) return;
 
-    // Nie robimy tu ponownego `join`
-    console.log(`markMessagesRead by ${userId} in room ${chatId}`);
 
     // Oznacz w bazie
     db.run(
@@ -16,7 +14,6 @@ module.exports = (io, socket, db) => {
       function (err) {
         if (err) return socket.emit("error", { msg: err.message });
 
-        console.log(`Broadcasting messagesRead to others in room ${chatId}`);
         // Wyślij tylko do WSZYSTKICH POZA TYM socketem
         io.to(chatId).except(socket.id).emit("messagesRead", { chatId, userId });
       }

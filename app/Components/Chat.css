@@ -1,4 +1,4 @@
-.read-indicator {
+/* .read-indicator {
   position: absolute;
   bottom: 70px;
   right: 10px;
@@ -75,7 +75,6 @@
 }
 
 .file-upload-input {
-  /* Hidden but accessible */
   position: absolute;
   width: 1px;
   height: 1px;
@@ -120,4 +119,4 @@
   display: flex;
   justify-content: center;
   align-items: center;
-}
+} */
