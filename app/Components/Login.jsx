@@ -6,6 +6,7 @@ export default function Login({ onLogin }) {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isRegistering, setIsRegistering] = useState(false);
+    
 
     async function handleSubmit(event) {
         event.preventDefault();

@@ -33,8 +33,8 @@ export default function Avatar({ user, onUpload, token }) {
         }
 
         const resized = await resizeImage(file, {
-            maxWidth: 50,
-            maxHeight: 50,
+            maxWidth: 100,
+            maxHeight: 100,
             forceSize: true
         });
 

@@ -11,6 +11,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
   const messagesEndRef = useRef(null);
   const socket = useContext(SocketContext);
   const [inputValue, setInputValue] = useState("");
+  const inputFileRef = useRef(null);
 
   useEffect(() => {
     if (!socket || !selectedChat) return;
@@ -22,7 +23,13 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
       socket.emit("markMessagesRead", { chatId: selectedChat.room_id });
     };
 
-    const handleNew = (msg) => setMessages((prev) => [...prev, msg]);
+    const handleNew = (msg) => {
+      if (!msg.sender_id && msg.user?.user_id) 
+      {
+      msg.sender_id = msg.user.user_id;
+      }
+      setMessages((prev) => [...prev, msg])
+    };
     const handleRead = ({ chatId }) => {
       if (String(chatId) === String(selectedChat.room_id)) setMessagesRead(true);
     };
@@ -39,6 +46,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
   }, [socket, selectedChat]);
 
   useEffect(() => {
+    console.log(messages);
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -59,12 +67,17 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
 
     setFileName(file.name);
   }
+  function clickFileInput() {
+    inputFileRef.current.click();
+    document.querySelector('.file-upload-btn').classList.add('active');
+  }
 
   async function handleSendMessage() {
     if (!socket || !selectedChat) return;
 
     const content = inputValue.trim();
     if (!content && !selectedFile) return;
+    document.querySelector('.file-upload-btn').classList.remove('active');
 
     let fileUrl = null;
     if (selectedFile) {
@@ -91,7 +104,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
       isGroup: selectedChat.type === "group",
       user,
       content,
-      fileUrl,
+      fileUrl
     });
 
     setInputValue("");
@@ -133,8 +146,8 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
 
       <div className="chat-messages">
         {messages.map((msg) => (
-          <div key={msg.message_id} className="chat-message">
-            <div className="chat-message-user">{msg.username || msg.user || "Unknown"}</div>
+          <div key={msg.message_id} className={"chat-message " + (msg.sender_id === user.user_id ? "message-mine" : "message-other")}>
+            {/* <div className="chat-message-user">{msg.username || msg.user || "Unknown"}</div> */}
             <div className="chat-message-content">{msg.content}</div>
             {msg.fileUrl && (
               /\.(jpeg|jpg|gif|png)$/i.test(msg.fileUrl) ? (
@@ -148,7 +161,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="chat-input-bar">
+      <div className="chat-input">
         <input
           className="chat-text-input"
           placeholder="Type a message..."
@@ -156,6 +169,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
         />
+        {/* <div className="file-input-wrapper">
         <label htmlFor="fileUpload" className="chat-file-label">
           {selectedFile ? "File ready" : "Attach"}
         </label>
@@ -165,9 +179,14 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
           className="chat-file-input"
           onChange={handleFileChange}
         />
+        </div>*/}
+        <div class="file-input-wrapper">
+        <input onChange={handleFileChange} accept="image/*,application/pdf" type="file" class="file-upload-input" ref={inputFileRef}  />
+        <div class="file-upload-btn" onClick={clickFileInput}><img src="../media/image-down.svg" alt="Upload" /></div>
+      </div>
         <button className="chat-send-btn" onClick={handleSendMessage}>
           Send
-        </button>
+        </button> 
       </div>
     </div>
   );

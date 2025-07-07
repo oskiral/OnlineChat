@@ -1,5 +1,4 @@
 import Sidebar from "./Sidebar";
-import FriendsPage from "./FriendsPage";
 import FriendList from "./FriendList";
 import Chat from "./Chat";
 

@@ -4,17 +4,13 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
   const [friends, setFriends] = useState([]);
   const [error, setError] = useState("");
 
-  async function fetchFriends() {
-    setError("");
+  async function fetchFriendsWithMessages() {
     try {
-      const res = await fetch("http://localhost:3001/friends", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch("http://localhost:3001/friends-with-last-message", {
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch friends");
       const data = await res.json();
-
       setFriends(data);
     } catch (err) {
       setError(err.message);
@@ -22,16 +18,8 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
   }
 
   useEffect(() => {
-    fetchFriends();
+    fetchFriendsWithMessages();
   }, []);
-
-  if (error) {
-    return <div style={{ color: "red" }}>Error: {error}</div>;
-  }
-
-  if (friends.length === 0) {
-    return <div>No friends found</div>;
-  }
 
   async function handleFriendClick(friend) {
     try {
@@ -41,11 +29,10 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ memberId: friend.user_id }), // Tworzy direct room
+        body: JSON.stringify({ memberId: friend.user_id }),
       });
 
       if (!res.ok) throw new Error("Failed to create or fetch room");
-
       const room = await res.json();
 
       onSelectedChat({
@@ -53,66 +40,48 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
         user: friend,
         type: room.is_group ? "group" : "direct",
       });
-
     } catch (err) {
       console.error("Error starting chat:", err);
-      setError("Failed to start chat");
+      setError("Could not open chat");
     }
   }
 
-  return (
-    // <div className="friends-list">
-    //   <h2>Friends</h2>
-    //   <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-    //     {friends.map((f) => (
-    //       <li
-    //         key={f.user_id}
-    //         onClick={() => {handleFriendClick(f)}}
-    //         className={
-    //           "friend-item" +
-    //           (selectedChat?.type === "dm" && selectedChat.user.user_id === f.user_id
-    //             ? " selected"
-    //             : "")
-    //         }
-    //       >
-    //         <img src={f.avatar || "../media/default.jpg"} alt="" />
-    //         <span>{f.username}</span>
-    //       </li>
-    //     ))}
-    //   </ul>
-    // </div>
-    <div className="chat-page">
-    <div className="chats-header">
-      <h1>Messages</h1>
-    </div>
-    <div className="chat-list">
-      {friends.map((f) => (
-        
-      <div
-      className={"chat-preview" + (selectedChat?.type === "dm" && selectedChat.user.user_id === f.user_id ? " selected" : "")}
-      onClick={() => {handleFriendClick(f)}}
-      key={f.user_id}
-      >
-        <div className="chat-avatar">
-          <img src={f.avatar || "/media/default.jpg"} alt="User" />
-        </div>
-        <div className="chat-info">
-          <strong>{f.username}</strong>
-          <p>Hey, are you coming?</p>
-        </div>
-      </div>
-      ))}
+  if (error) return <div style={{ color: "red" }}>{error}</div>;
+  if (friends.length === 0) return <div>No friends yet</div>;
 
-    {/* <div class="chat-preview active">
-      <div class="chat-avatar">
-        <img src="/media/default.jpg" alt="User" />
+  return (
+    <div className="chat-page">
+      <div className="chats-header">
+        <h1>Messages</h1>
       </div>
-      <div class="chat-info">
-        <strong>Jane</strong>
-        <p>I'll send the file now.</p>
+      <div className="chat-list">
+        {friends.map((f) => (
+          <div
+            key={f.user_id}
+            className={
+              "chat-preview" +
+              (selectedChat?.user.user_id === f.user_id ? " active" : "")
+            }
+            onClick={() => handleFriendClick(f)}
+          >
+            <div className="chat-avatar">
+              <img src={f.avatar || "/media/default.jpg"} alt="User" />
+            </div>
+            <div className="chat-info">
+              <strong>{f.username}</strong>
+              <p className="last-message">
+                {f.last_message
+                  ? f.last_message
+                  : f.last_file_url
+                    ? /\.(jpe?g|png|gif|webp)$/i.test(f.last_file_url)
+                      ? `${f.last_sender_username} sent a photo.`
+                      : `${f.last_sender_username} sent a file.`
+                    : "No messages yet..."}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
-    </div> */}
-    </div>
     </div>
   );
 }

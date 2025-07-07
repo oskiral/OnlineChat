@@ -409,7 +409,7 @@ app.get('/me', authenticate, (req, res) => {
 
 app.get("/rooms", authenticate, (req, res) => {
   const user = req.user;
-  roomService.getUserRooms(user)
+  roomService.getUserRoomsWithLastMessages(user)
   .then((rooms) => res.json())
   .catch(err => {
     console.log("Error fetching rooms of the user");
@@ -489,6 +489,78 @@ app.get("/users/search", authenticate, async (req, res) => {
     res.status(500).json({error: 'Server error'});
   }
 })
+
+app.get("/friends-with-last-message", authenticate, async (req, res) => {
+  const userId = req.user.user_id;
+
+  try {
+    // Krok 1: pobierz listę znajomych
+    const friendships = await new Promise((resolve, reject) => {
+      const sql = `SELECT user1_id, user2_id FROM friendships WHERE user1_id = ? OR user2_id = ?`;
+      db.all(sql, [userId, userId], (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
+    });
+
+    const friendIds = friendships.map(f => (f.user1_id === userId ? f.user2_id : f.user1_id));
+    if (friendIds.length === 0) return res.json([]);
+
+    const placeholders = friendIds.map(() => "?").join(",");
+    const friends = await new Promise((resolve, reject) => {
+      const sql = `SELECT user_id, username, avatar FROM users WHERE user_id IN (${placeholders})`;
+      db.all(sql, friendIds, (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
+    });
+
+    // Krok 2: pobierz dla każdego znajomego ostatnią wiadomość (jeśli istnieje)
+    const enrichedFriends = await Promise.all(friends.map(async (friend) => {
+      const lastMessage = await new Promise((resolve) => {
+        const sql = `
+          SELECT m.content, m.fileUrl, m.sent_at, u.username AS senderUsername
+          FROM messages m
+          JOIN users u ON u.user_id = m.sender_id
+          WHERE m.chat_id = (
+            SELECT r.room_id
+            FROM rooms r
+            JOIN room_members rm1 ON rm1.room_id = r.room_id AND rm1.user_id = ?
+            JOIN room_members rm2 ON rm2.room_id = r.room_id AND rm2.user_id = ?
+            WHERE r.is_group = 0
+            LIMIT 1
+          )
+          ORDER BY m.sent_at DESC
+          LIMIT 1
+        `;
+
+        db.get(sql, [userId, friend.user_id], (err, row) => {
+          if (err || !row) return resolve(null);
+          resolve(row);
+        });
+      });
+
+      return {
+        ...friend,
+        last_message: lastMessage?.content?.slice(0, 20) + (lastMessage?.content?.length > 20 ? "..." : "") || null,
+        last_message_date: lastMessage?.sent_at || null,
+        last_file_url: lastMessage?.fileUrl || null,
+        last_sender_username: lastMessage?.senderUsername || null
+      };
+    }));
+
+    enrichedFriends.sort((a, b) => {
+      const dateA = a.last_message_date ? new Date(a.last_message_date) : 0;
+      const dateB = b.last_message_date ? new Date(b.last_message_date) : 0;
+      return dateB - dateA;
+    });
+    res.json(enrichedFriends);
+  } catch (err) {
+    console.error("Error in /friends-with-last-message:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 
 app.get("/friend-requests", authenticate, (req, res) => {
   const userId = req.user.user_id;

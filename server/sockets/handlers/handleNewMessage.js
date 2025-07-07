@@ -1,7 +1,6 @@
 // sockets/handlers/handleNewMessage.js
 module.exports = (io, socket, db) => {
-  socket.on("newMessage", ({ chatId, content, fileUrl }) => {
-    console.log("HANDLER");
+  socket.on("newMessage", ({ chatId, content, fileUrl}) => {
     if (!chatId || (!content && !fileUrl)) {
         return socket.emit("error", { msg: "chatId and content or file are required" });
     }
@@ -40,6 +39,7 @@ module.exports = (io, socket, db) => {
                     username,
                     content,
                     fileUrl,
+                    sender_id : userId,
                     sent_at: new Date().toISOString(),
                 };
                 

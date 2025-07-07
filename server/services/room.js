@@ -59,6 +59,52 @@ module.exports = function createRoomService(db) {
     );
   }
 
+  async function getUserRoomsWithLastMessages(userId) {
+    const sql = `
+      SELECT 
+        r.room_id,
+        r.room_name,
+        r.is_group,
+        m.content AS last_message,
+        m.sent_at AS last_message_date,
+        u.user_id AS other_user_id,
+        u.username AS other_username,
+        u.avatar AS other_avatar
+      FROM rooms r
+      JOIN room_members rm ON rm.room_id = r.room_id
+      LEFT JOIN (
+        SELECT m1.*
+        FROM messages m1
+        JOIN (
+          SELECT chat_id, MAX(sent_at) AS max_created
+          FROM messages
+          GROUP BY chat_id
+        ) latest ON latest.chat_id = m1.chat_id AND latest.max_created = m1.sent_at
+      ) m ON m.chat_id = r.room_id
+      LEFT JOIN room_members other_rm ON other_rm.room_id = r.room_id AND other_rm.user_id != ?
+      LEFT JOIN users u ON u.user_id = other_rm.user_id
+      WHERE rm.user_id = ?
+      ORDER BY m.sent_at DESC
+    `;
+
+    const rows = await all(sql, [userId, userId]);
+
+    return rows.map(row => ({
+      room_id: row.room_id,
+      room_name: row.room_name,
+      is_group: row.is_group,
+      last_message: row.last_message,
+      last_message_date: row.last_message_date,
+      user: row.is_group
+        ? null
+        : {
+            user_id: row.other_user_id,
+            username: row.other_username,
+            avatar: row.other_avatar
+          }
+    }));
+  }
+
   /**
    * Sprawdza, czy dany pokój to pokój grupowy (is_group = 1).
    */
@@ -102,6 +148,7 @@ module.exports = function createRoomService(db) {
     createRoom,
     addUserToRoom,
     isGroupRoom,
-    getDirectRoom
+    getDirectRoom,
+    getUserRoomsWithLastMessages
   };
 }
