@@ -13,6 +13,15 @@ function getSocketIdsForUser(userId) {
   return Array.from(sockets).map(s => s.id);
 }
 
+function emitToUser(io, userId, event, data) {
+  const sockets = userSockets.get(userId);
+  if (!sockets) return;
+  for (const socket of sockets) {
+    socket.emit(event, data);
+  }
+}
+
+
 function registerSocketHandlers(io, db) {
   // Autoryzacja socketów na podstawie tokenu JWT
   io.use((socket, next) => {
@@ -68,5 +77,6 @@ function registerSocketHandlers(io, db) {
 module.exports = {
   registerSocketHandlers,
   getSocketIdsForUser,
-  userSockets
+  userSockets,
+  emitToUser
 }

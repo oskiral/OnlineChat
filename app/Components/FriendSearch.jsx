@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function FriendSearch({ token, onFriendAdded }) {
+export default function FriendSearch({ token }) {
   const [username, setUsername] = useState("");
   const [status, setStatus] = useState("");
 
@@ -23,7 +23,6 @@ export default function FriendSearch({ token, onFriendAdded }) {
       if (res.ok) {
         setStatus("Friend request sent!");
         setUsername("");
-        onFriendAdded(); // odśwież listę znajomych
       } else {
         setStatus(data.error || "Error sending request");
       }

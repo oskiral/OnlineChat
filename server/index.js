@@ -12,7 +12,7 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
 const createRoomService = require('./services/room.js');
-const {registerSocketHandlers, userSockets, getSocketIdsForUser} = require("./sockets/index.js");
+const {registerSocketHandlers, userSockets, getSocketIdsForUser, emitToUser} = require("./sockets/index.js");
 
 const app = express();
 const port = process.env.PORT;
@@ -494,7 +494,6 @@ app.get("/friends-with-last-message", authenticate, async (req, res) => {
   const userId = req.user.user_id;
 
   try {
-    // Krok 1: pobierz listę znajomych
     const friendships = await new Promise((resolve, reject) => {
       const sql = `SELECT user1_id, user2_id FROM friendships WHERE user1_id = ? OR user2_id = ?`;
       db.all(sql, [userId, userId], (err, rows) => {
@@ -515,7 +514,7 @@ app.get("/friends-with-last-message", authenticate, async (req, res) => {
       });
     });
 
-    // Krok 2: pobierz dla każdego znajomego ostatnią wiadomość (jeśli istnieje)
+
     const enrichedFriends = await Promise.all(friends.map(async (friend) => {
       const lastMessage = await new Promise((resolve) => {
         const sql = `
@@ -539,10 +538,17 @@ app.get("/friends-with-last-message", authenticate, async (req, res) => {
           resolve(row);
         });
       });
+      const emptyMessages = [
+        "No messages yet",
+        "Start the conversation",
+        "Say hello!",
+        "Be the first to message",
+        "Break the ice!"
+      ];
 
       return {
         ...friend,
-        last_message: lastMessage?.content?.slice(0, 20) + (lastMessage?.content?.length > 20 ? "..." : "") || null,
+        last_message: lastMessage?.content ? lastMessage?.content?.slice(0, 20) + (lastMessage?.content?.length > 20 ? "..." : "") : emptyMessages[Math.floor(Math.random() * emptyMessages.length)],
         last_message_date: lastMessage?.sent_at || null,
         last_file_url: lastMessage?.fileUrl || null,
         last_sender_username: lastMessage?.senderUsername || null
@@ -597,12 +603,10 @@ app.get("/friends", authenticate, async (req, res) => {
       });
     });
 
-    // Wyciągamy listę znajomych (to ten user, który nie jest aktualnym userId)
     const friendIds = friendships.map(f => (f.user1_id === userId ? f.user2_id : f.user1_id));
 
     if (friendIds.length === 0) return res.json([]);
 
-    // Pobieramy dane znajomych
     const placeholders = friendIds.map(() => '?').join(',');
     const users = await new Promise((resolve, reject) => {
       const sql = `SELECT user_id, username, avatar FROM users WHERE user_id IN (${placeholders})`;
@@ -612,6 +616,7 @@ app.get("/friends", authenticate, async (req, res) => {
       });
     });
 
+    console.log(users);
     res.json(users);
 
   } catch (err) {
@@ -728,6 +733,8 @@ app.post("/friend-requests/accept", authenticate, async (req, res) => {
       });
     });
 
+    emitToUser(io, recieverId, 'friend-added', { friendId: senderId });
+    emitToUser(io, senderId, 'friend-added', { friendId: recieverId });
     res.json({success: true, message:"Friend request accepted"});
 
   } catch (err) {

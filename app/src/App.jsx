@@ -1,10 +1,5 @@
-import { useState, useEffect } from "react";
-import Chat from "../Components/Chat";
+import { useState, useEffect, act } from "react";
 import Login from "../Components/Login";
-import UserPanel from "../Components/UserPanel";
-import FriendsPage from "../Components/FriendsPage";
-import FriendRequests from "../Components/FriendRequests";
-import Sidebar from "../Components/Sidebar";
 import AppLayout from "../Components/AppLayout";
 
 import { SocketProvider } from "../utils/socketProvider";
@@ -14,6 +9,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState('chat');
 
   useEffect(() => {
     async function fetchUser() {
@@ -83,6 +79,7 @@ function App() {
   function handleLogout() {
     setUser(null);
     setSelectedChat(null);
+    setActiveView('chat')
     localStorage.removeItem("token");
     localStorage.removeItem("username");
   }
@@ -97,6 +94,8 @@ function App() {
         onLogout={handleLogout}
         onSelectedChat={(chat) => setSelectedChat(chat)}
         selectedChat={selectedChat}
+        activeView={activeView}
+        setActiveView={setActiveView}
       />
       {/* <div style={{display : "flex"}}>
         <div>

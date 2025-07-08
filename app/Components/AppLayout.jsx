@@ -1,13 +1,11 @@
 import Sidebar from "./Sidebar";
-import FriendList from "./FriendList";
-import Chat from "./Chat";
+import RightPanel from "./RightPanel";
 
-export default function AppLayout({user, setUser, handleLogout, selectedChat, onSelectedChat}) {
+export default function AppLayout({user, setUser, onLogout, selectedChat, activeView, setActiveView, onSelectedChat}) {
     return (
         <div className="app-layout">
-        <Sidebar />
-        <FriendList token={user.token} onSelectedChat={onSelectedChat} selectedChat={selectedChat} />
-        <Chat user={user} token={user.token} onLogout={handleLogout}  setUser={setUser} selectedChat={selectedChat}/>
+        <Sidebar setActiveView={setActiveView} activeView={activeView}/>
+        <RightPanel activeView={activeView} user={user} setUser={setUser} onLogout={onLogout} selectedChat={selectedChat} onSelectedChat={onSelectedChat} />
         </div>
     )
 }
