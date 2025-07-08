@@ -2,86 +2,59 @@ import { useState } from "react";
 import "./Login.css";
 
 export default function Login({ onLogin }) {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
-    const [isRegistering, setIsRegistering] = useState(false);
-    
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false);
 
-    async function handleSubmit(event) {
-        event.preventDefault();
-        setError("");
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
 
-        if (username.trim() === "" || password === "") {
-            setError("Username and password cannot be empty.");
-            return;
-        }
-
-        const endpoint = isRegistering ? "/register" : "/login";
-        try {
-            const res = await fetch(`http://localhost:3001${endpoint}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ username: username.trim(), password }),
-            });
-
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || "An error occurred");
-            }
-
-            onLogin({username: data.username, token: data.token});
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('username', data.username);
-        } catch (error) {
-            setError(error.message);
-        }
+    // Basic validation
+    if (username.trim() === "" || password === "") {
+      setError("Username and password cannot be empty.");
+      return;
+    }
+    if (isRegistering && password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
     }
 
-    return (
-        // <form onSubmit={handleSubmit} className="login-form">
-        //     <div className="login-header">
-        //         <h2>{isRegistering ? "Register" : "Login"}</h2>
-        //         <p>Please enter your credentials to continue</p>
-        //     </div>
-        //     <div className="login-input">
-        //     <input
-        //         type="text"
-        //         placeholder="Enter your username"
-        //         value={username}
-        //         onChange={(e) => setUsername(e.target.value)}
-        //     />
-        //     <input
-        //         type="password"
-        //         placeholder="Enter your password"
-        //         value={password}
-        //         onChange={(e) => setPassword(e.target.value)}
-        //     />
-        //     <button type="submit">
-        //         {isRegistering ? "Register" : "Login"}
-        //     </button>
-        //     {error && <p className="error">{error}</p>}
-        //     <p className="switch-auth">
-        //     {isRegistering ? (
-        //         <>
-        //         Already have an account?{" "}
-        //         <span onClick={() => setIsRegistering(false)}>Login</span>
-        //         </>
-        //     ) : (
-        //         <>
-        //         Don't have an account?{" "}
-        //         <span onClick={() => setIsRegistering(true)}>Register</span>
-        //         </>
-        //     )}
-        //     </p>
-        // </div>
-        // </form>
-        <div className="login-container">
+    const endpoint = isRegistering ? "/register" : "/login";
+    try {
+      const res = await fetch(`http://localhost:3001${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "An error occurred");
+      }
+
+      // On successful login or register, invoke callback and store token
+      onLogin({ username: data.username, token: data.token });
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("username", data.username);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  return (
+    <div className="login-container">
       <div className="login-card">
-        <h1 className="login-title">Welcome Back</h1>
-        <p className="login-subtitle">Log in to continue chatting</p>
+        <h1 className="login-title">
+          {isRegistering ? "Create Account" : "Welcome Back"}
+        </h1>
+        <p className="login-subtitle">
+          {isRegistering
+            ? "Register a new account to start chatting"
+            : "Log in to continue chatting"}
+        </p>
 
         <form onSubmit={handleSubmit} className="login-form">
           <input
@@ -98,17 +71,55 @@ export default function Login({ onLogin }) {
             onChange={(e) => setPassword(e.target.value)}
             className="login-input"
           />
+
+          {isRegistering && (
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="login-input"
+            />
+          )}
+
+          {error && <p className="login-error">{error}</p>}
+
           <button type="submit" className="login-button">
-            Log In
+            {isRegistering ? "Register" : "Log In"}
           </button>
         </form>
 
-        {/* <div className="login-footer">
-          <a href="#" className="login-link">Forgot Password?</a>
-          <span className="login-separator">|</span>
-          <a href="#" className="login-link">Sign Up</a>
-        </div> */}
+        <div className="login-toggle">
+          {isRegistering ? (
+            <>
+              <span>Already have an account?</span>{" "}
+              <button
+                className="toggle-button"
+                onClick={() => {
+                  setIsRegistering(false);
+                  setError("");
+                }}
+              >
+                Log In
+              </button>
+            </>
+          ) : (
+            <>
+              <span>Don't have an account?</span>{" "}
+              <button
+                className="toggle-button"
+                onClick={() => {
+                  setIsRegistering(true);
+                  setError("");
+                  setConfirmPassword("");
+                }}
+              >
+                Register
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
-    );
+  );
 }

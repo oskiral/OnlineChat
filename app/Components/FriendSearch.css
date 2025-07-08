@@ -1,0 +1,45 @@
+.friend-search {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.friend-search-input {
+  flex-grow: 1;
+  padding: 8px 12px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #2a3b55;
+  color: #fff;
+  outline: none;
+  transition: background 0.2s;
+}
+
+.friend-search-input:focus {
+  background: #354762;
+}
+
+.friend-search-button {
+  margin-left: 0.5rem;
+  padding: 8px 12px;
+  font-size: 1.2rem;
+  line-height: 1;
+  border: none;
+  border-radius: 6px;
+  background: #3d8bff;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.friend-search-button:hover {
+  background: #2b6cb0;
+}
+
+.friend-search-status {
+  margin-left: 1rem;
+  min-width: 150px;
+  font-size: 0.9rem;
+  color: #f56565;
+}

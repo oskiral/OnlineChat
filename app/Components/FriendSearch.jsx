@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "./FriendSearch.css";
 
 export default function FriendSearch({ token }) {
   const [username, setUsername] = useState("");
@@ -9,7 +10,8 @@ export default function FriendSearch({ token }) {
       setStatus("Please enter a username");
       return;
     }
-    setStatus("Sending request...");
+    setStatus("Sending request…");
+
     try {
       const res = await fetch("http://localhost:3001/friend-requests/send", {
         method: "POST",
@@ -17,33 +19,46 @@ export default function FriendSearch({ token }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ recieverUsername: username }),
+        body: JSON.stringify({ recieverUsername: username.trim() }),
       });
-      const data = await res.json();
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        console.error("Failed to parse JSON:", jsonErr);
+        throw new Error(`Server returned ${res.status}`);
+      }
+
       if (res.ok) {
-        setStatus("Friend request sent!");
+        setStatus("✅ Friend request sent!");
         setUsername("");
       } else {
-        setStatus(data.error || "Error sending request");
+        console.warn("API error:", data);
+        setStatus(data.error || `Error ${res.status}`);
       }
-    } catch (e) {
-      setStatus("Network error");
+    } catch (err) {
+      console.error("Request failed:", err);
+      setStatus(err.message.includes("Failed to fetch") 
+        ? "Network error – please check server & CORS" 
+        : err.message);
     }
   }
 
   return (
-    <div style={{ display: "flex", marginBottom: 20 }}>
+    <div className="friend-search">
       <input
         type="text"
         placeholder="Enter friend username"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
-        style={{ flexGrow: 1, padding: "8px", fontSize: 16 }}
+        className="friend-search-input"
+        onKeyDown={(e) => e.key === "Enter" && sendFriendRequest()}
       />
-      <button onClick={sendFriendRequest} style={{ marginLeft: 8, padding: "8px 12px" }}>
+      <button onClick={sendFriendRequest} className="friend-search-button">
         +
       </button>
-      <div style={{ marginLeft: 12, color: "red", minWidth: 150 }}>{status}</div>
+      <div className="friend-search-status">{status}</div>
     </div>
   );
 }

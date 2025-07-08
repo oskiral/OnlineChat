@@ -46,9 +46,29 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
     }
   }
 
-  if (error) return <div style={{ color: "red" }}>{error}</div>;
-  if (friends.length === 0) return <div>No friends yet</div>;
+  // Error state
+  if (error) {
+    return (
+      <div className="chat-empty chat-error">
+        <p className="empty-icon">⚠️</p>
+        <p className="empty-text">Error: {error}</p>
+        <p className="empty-subtext">Please try again later.</p>
+      </div>
+    );
+  }
 
+  // Empty state
+  if (friends.length === 0) {
+    return (
+      <div className="chat-empty">
+        <p className="empty-icon">💬</p>
+        <p className="empty-text">You have no friends yet.</p>
+        <p className="empty-subtext">Send some invites to get started!</p>
+      </div>
+    );
+  }
+
+  // List of friends
   return (
     <div className="chat-page">
       <div className="chats-header">
@@ -65,7 +85,7 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
             onClick={() => handleFriendClick(f)}
           >
             <div className="chat-avatar">
-              <img src={f.avatar || "/media/default.jpg"} alt="User" />
+              <img src={f.avatar || "/media/default.jpg"} alt={f.username} />
             </div>
             <div className="chat-info">
               <strong>{f.username}</strong>
@@ -73,10 +93,10 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
                 {f.last_message
                   ? f.last_message
                   : f.last_file_url
-                    ? /\.(jpe?g|png|gif|webp)$/i.test(f.last_file_url)
-                      ? `${f.last_sender_username} sent a photo.`
-                      : `${f.last_sender_username} sent a file.`
-                    : "No messages yet..."}
+                  ? /\.(jpe?g|png|gif|webp)$/i.test(f.last_file_url)
+                    ? `${f.last_sender_username} sent a photo.`
+                    : `${f.last_sender_username} sent a file.`
+                  : "No messages yet..."}
               </p>
             </div>
           </div>

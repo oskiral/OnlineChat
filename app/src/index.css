@@ -188,6 +188,41 @@ body {
   line-height: .1em;
 }
 
+/* Empty / error state in the friend list */
+.chat-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 24%;
+  padding: 20px;
+  background-color: var(--bg-chat);
+  border-radius: 12px;
+  text-align: center;
+  color: #a0aec0;
+}
+
+.chat-error {
+  color: #f56565; /* red-500 */
+}
+
+.chat-empty .empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.chat-empty .empty-text {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  color: #e2e8f0; /* slightly lighter */
+}
+
+.chat-empty .empty-subtext {
+  font-size: 0.85rem;
+  color: #718096;
+}
+
+
 /* Główne okno czatu */
 .chat-placeholder {
   text-align: center;

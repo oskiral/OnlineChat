@@ -65,3 +65,36 @@
   color: #aaa;
   cursor: pointer;
 }
+.search-bar {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+.search-button {
+    background: #2e89ff;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+
+  /* padding: 10px 20px; */
+  width: 150px;
+  height: 45px;
+  border: none;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: .5rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s, transform 0.1s;
+  cursor: pointer;
+}
+.search-button:hover {
+  background: #1877e0;
+}
+.search-button:active {
+  transform: scale(0.98);
+}
