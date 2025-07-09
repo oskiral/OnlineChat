@@ -1,14 +1,15 @@
-// sockets/handlers/handleGetMessages.js
 module.exports = (io, socket, db) => {
   socket.on("getMessages", async ({ chatId }) => {
-    if (!chatId) {
-      return socket.emit("error", { msg: "chatId is required" });
+    if (!chatId || (typeof chatId !== "string" && typeof chatId !== "number")) {
+      return socket.emit("error", { msg: "Invalid or missing chatId" });
     }
 
-    // Dołącz TEN socket do pokoju
+    const rooms = Array.from(socket.rooms);
+    rooms.forEach(room => {
+      if (room !== socket.id) socket.leave(room);
+    });
     socket.join(String(chatId));
 
-    // POBIERZ wiadomości z bazy
     try {
       const messages = await new Promise((resolve, reject) => {
         db.all(
@@ -22,8 +23,7 @@ module.exports = (io, socket, db) => {
         );
       });
 
-      // Wyślij historię tylko temu socketowi
-      socket.emit("messages", messages);
+      socket.emit("messages", { chatId, messages });
     } catch (err) {
       socket.emit("error", { msg: err.message });
     }

@@ -56,7 +56,6 @@ function authenticate(req, res, next) {
 
 
 
-
 function notifyUsersRoomCreated(io, userIds, room) {
   userIds.forEach(userId => {
     const socketId = getSocketIdsForUser(userId)[0]; // Twoja funkcja mapująca userId → socketId
@@ -490,6 +489,24 @@ app.get("/users/search", authenticate, async (req, res) => {
   }
 })
 
+app.get("/users/:id", authenticate, (req, res) => {
+  const userId = req.params.id;
+
+  const sql = `SELECT user_id, username, avatar FROM users WHERE user_id = ?`;
+  db.get(sql, [userId], (err, row) => {
+    if (err) {
+      console.error("Error fetching user by ID:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    if (!row) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(row);
+  });
+});
+
+
 app.get("/friends-with-last-message", authenticate, async (req, res) => {
   const userId = req.user.user_id;
 
@@ -518,9 +535,10 @@ app.get("/friends-with-last-message", authenticate, async (req, res) => {
     const enrichedFriends = await Promise.all(friends.map(async (friend) => {
       const lastMessage = await new Promise((resolve) => {
         const sql = `
-          SELECT m.content, m.fileUrl, m.sent_at, u.username AS senderUsername
+          SELECT r.room_id, m.content, m.fileUrl, m.sent_at, u.username AS senderUsername
           FROM messages m
           JOIN users u ON u.user_id = m.sender_id
+          JOIN rooms r ON room_id = m.chat_id
           WHERE m.chat_id = (
             SELECT r.room_id
             FROM rooms r
@@ -551,7 +569,8 @@ app.get("/friends-with-last-message", authenticate, async (req, res) => {
         last_message: lastMessage?.content ? lastMessage?.content?.slice(0, 20) + (lastMessage?.content?.length > 20 ? "..." : "") : emptyMessages[Math.floor(Math.random() * emptyMessages.length)],
         last_message_date: lastMessage?.sent_at || null,
         last_file_url: lastMessage?.fileUrl || null,
-        last_sender_username: lastMessage?.senderUsername || null
+        last_sender_username: lastMessage?.senderUsername || null,
+        room_id : lastMessage?.room_id || null
       };
     }));
 
@@ -773,11 +792,26 @@ app.post("/friend-requests/reject", authenticate, async (req, res) => {
 })
 
 
-app.post("/test-read", (req, res) => {
-  const { chatId, userId } = req.body;
-  io.to(String(chatId)).emit("messagesRead", { chatId, userId });
-  res.json({ success: true });
-});
+app.get("/unread-counts",  authenticate,(req, res) => {
+  const userId = req.user.user_id;
+  
+  const sql = `
+  SELECT m.chat_id, COUNT (*) as unread_count
+  FROM messages m
+  JOIN room_members rm ON rm.room_id = m.chat_id AND rm.user_id = ?
+  LEFT JOIN message_reads mr ON mr.message_id = m.message_id AND mr.user_id = ?
+  WHERE mr.message_id IS NULL AND m.sender_id != ?
+  GROUP BY m.chat_id
+  `;
+
+  db.all(sql, [userId, userId, userId], (err, rows) => {
+    if (err) {
+      console.error("Unread count error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(rows); // { chat_id: 1, unread_count: 2 }
+  });
+})
 
 // Start the server
 server.listen(port, () => {

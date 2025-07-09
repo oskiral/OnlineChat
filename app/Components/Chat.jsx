@@ -13,37 +13,64 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
   const [inputValue, setInputValue] = useState("");
   const inputFileRef = useRef(null);
 
-  useEffect(() => {
-    if (!socket || !selectedChat) return;
+  const [readBy, setReadBy] = useState(new Set());
 
-    socket.emit("getMessages", { chatId: selectedChat.room_id });
+ useEffect(() => {
+  if (!socket || !selectedChat) return;
 
-    const handleMessages = (msgs) => {
-      setMessages(msgs);
-      socket.emit("markMessagesRead", { chatId: selectedChat.room_id });
-    };
+  socket.emit("messagesRead", { chatId: selectedChat.room_id });
 
-    const handleNew = (msg) => {
-      if (!msg.sender_id && msg.user?.user_id) 
-      {
+  if (selectedChat && socket) {
+    socket.emit("markMessagesRead", {
+      chatId: selectedChat.room_id,
+    });
+  }
+
+  socket.emit("getMessages", { chatId: selectedChat.room_id });
+
+  const handleMessages = ({ chatId, messages }) => {
+    setMessages(messages);
+    socket.emit("markMessagesRead", { chatId: selectedChat.room_id });
+  };
+
+  const handleNew = (msg) => {
+    if (!msg.sender_id && msg.user?.user_id) {
       msg.sender_id = msg.user.user_id;
-      }
-      setMessages((prev) => [...prev, msg])
-    };
-    const handleRead = ({ chatId }) => {
-      if (String(chatId) === String(selectedChat.room_id)) setMessagesRead(true);
-    };
+    }
+    if (String(msg.chat_id) !== String(selectedChat.room_id)) return;
+    setMessages((prev) => [...prev, msg]);
+  };
 
-    socket.on("messages", handleMessages);
-    socket.on("newMessage", handleNew);
-    socket.on("messagesRead", handleRead);
+  function onMessagesReadConfirmation({ chatId }) {
+    console.log(1);
+    console.log(chatId);
+    if (chatId === selectedChat.room_id) {
+      console.log(2);
+      setReadBy(new Set());
+    }
+  }
 
-    return () => {
-      socket.off("messages", handleMessages);
-      socket.off("newMessage", handleNew);
-      socket.off("messagesRead", handleRead);
-    };
-  }, [socket, selectedChat]);
+  function onMessageReadBy({ chatId, readerId }) {
+    console.log(3);
+    if (chatId !== selectedChat.room_id) return;
+    console.log(4);
+    setReadBy(prev => new Set([...prev, readerId]));
+  }
+
+  socket.on("messagesReadConfirmation", onMessagesReadConfirmation);
+  socket.on("messageReadBy", onMessageReadBy);
+
+  socket.on("messages", handleMessages);
+  socket.on("newMessage", handleNew);
+
+  return () => {
+    socket.off("messagesReadConfirmation", onMessagesReadConfirmation);
+    socket.off("messageReadBy", onMessageReadBy);
+    socket.off("messages", handleMessages);
+    socket.off("newMessage", handleNew);
+  };
+}, [socket, selectedChat]);
+
 
   useEffect(() => {
     console.log(messages);
@@ -99,6 +126,24 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
       }
     }
 
+    // Tworzymy tymczasowe ID wiadomości lokalnie (może timestamp lub UUID)
+    const tempId = `temp-${Date.now()}`;
+
+    // Dodajemy lokalnie wiadomość do stanu - optimistic update
+    setMessages(prev => [
+      ...prev,
+      {
+        message_id: tempId,         // tymczasowe ID, zastąpi je backend po potwierdzeniu
+        chat_id: selectedChat.room_id,
+        sender_id: user.user_id,
+        username: user.username,
+        content,
+        fileUrl,
+        sent_at: new Date().toISOString(),
+      }
+    ]);
+
+    // Emitujemy wiadomość do serwera
     socket.emit("newMessage", {
       chatId: selectedChat.room_id,
       isGroup: selectedChat.type === "group",
@@ -111,6 +156,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
     setSelectedFile(null);
     setFileName("");
   }
+
 
   function handleKeyDown(e) {
     if (e.key === "Enter") {
@@ -126,6 +172,11 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
     </div>
     )
   }
+  const lastMessage = messages[messages.length - 1];
+  const lastMessageReadByOther =
+    lastMessage &&
+    lastMessage.sender_id === user.user_id &&
+    Array.from(readBy).some(id => id !== user.user_id);
 
   return (
     <div className="chat-window">
@@ -145,7 +196,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
       </div>
 
       <div className="chat-messages">
-        {messages.map((msg) => (
+        {messages.map((msg, i) => (
           <div key={msg.message_id} className={"chat-message " + (msg.sender_id === user.user_id ? "message-mine" : "message-other")}>
             {/* <div className="chat-message-user">{msg.username || msg.user || "Unknown"}</div> */}
             <div className="chat-message-content">{msg.content}</div>
@@ -155,6 +206,9 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
               ) : (
                 <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">Download file</a>
               )
+            )}
+            {i === messages.length - 1 && lastMessageReadByOther && (
+              <div className="read-receipt">✔️ Read</div>
             )}
           </div>
         ))}

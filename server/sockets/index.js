@@ -6,6 +6,10 @@ const handleGetMessages = require("./handlers/handleGetMessages");
 const handleNewMessages = require("./handlers/handleNewMessage");
 const handleMarkMessagesRead = require("./handlers/handleMarkMessagesRead");
 
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is not set in environment variables");
+}
+
 function getSocketIdsForUser(userId) {
   const sockets = userSockets.get(userId);
   if (!sockets) return [];
@@ -20,7 +24,6 @@ function emitToUser(io, userId, event, data) {
     socket.emit(event, data);
   }
 }
-
 
 function registerSocketHandlers(io, db) {
   // Autoryzacja socketów na podstawie tokenu JWT
@@ -53,19 +56,39 @@ function registerSocketHandlers(io, db) {
       socket.user_id = userId;
       socket.sessionId = decoded.sessionId;
 
-      if (!userSockets.has(username)) {
-        userSockets.set(username, new Set());
+      if (!userSockets.has(userId)) {
+        userSockets.set(userId, new Set());
       }
-      userSockets.get(username).add(socket);
+      userSockets.get(userId).add(socket);
 
       next();
     });
   });
 
-
   // Obsługa zdarzeń po nawiązaniu połączenia
   io.on("connection", (socket) => {
     console.log("✅ Socket connected:", socket.id);
+
+    socket.join(`user:${socket.user_id}`);
+    
+
+    // Debugowanie - logowanie wszystkich odebranych eventów (opcjonalne)
+    socket.onAny((event, ...args) => {
+      console.log(`📥 Socket ${socket.id} received event '${event}':`, args);
+    });
+
+    // Obsługa rozłączenia i usuwanie socketów z mapy
+    socket.on("disconnect", () => {
+      const userId = socket.user_id;
+      const userSet = userSockets.get(userId);
+      if (userSet) {
+        userSet.delete(socket);
+        if (userSet.size === 0) {
+          userSockets.delete(userId);
+        }
+      }
+      console.log(`❌ Socket disconnected: ${socket.id}`);
+    });
 
     // Rejestruj obsługę zdarzeń
     handleGetMessages(io, socket, db);
@@ -79,4 +102,4 @@ module.exports = {
   getSocketIdsForUser,
   userSockets,
   emitToUser
-}
+};

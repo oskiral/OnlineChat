@@ -183,10 +183,29 @@ body {
   padding: 20px;
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 .chat-list .chat-preview .chat-info p {
   line-height: .1em;
 }
+
+.chat-unread-indicator {
+  background-color: var(--accent-blue);
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 25px;
+  min-height: 25px;
+  text-align: center;
+  user-select: none;
+  margin-left: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
 
 /* Empty / error state in the friend list */
 .chat-empty {

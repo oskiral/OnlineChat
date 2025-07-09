@@ -24,3 +24,4 @@ chat.db
 *.njsproj
 *.sln
 *.sw?
+server/db/chat.db

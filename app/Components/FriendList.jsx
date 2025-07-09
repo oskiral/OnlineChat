@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { useSocket } from "../utils/socketProvider";
 
-export default function FriendList({ token, onSelectedChat, selectedChat }) {
+export default function FriendList({ user, token, onSelectedChat, selectedChat }) {
+  const socket = useSocket();
   const [friends, setFriends] = useState([]);
   const [error, setError] = useState("");
+  const [unreadCounts, setUnreadCounts] = useState({});
 
   async function fetchFriendsWithMessages() {
     try {
@@ -17,9 +20,71 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
     }
   }
 
+  async function fetchUnreadCounts() {
+    try {
+      const res = await fetch("http://localhost:3001/unread-counts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch unread counts");
+      const data = await res.json(); // [{ chat_id, unread_count }]
+      const map = {};
+      data.forEach(({ chat_id, unread_count }) => {
+        map[chat_id] = unread_count;
+      });
+      setUnreadCounts(map);
+    } catch (err) {
+      console.error("Unread counts fetch error", err);
+    }
+  }
+
   useEffect(() => {
     fetchFriendsWithMessages();
+    fetchUnreadCounts();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    function onNewMessage(msg) {
+      setUnreadCounts(prev => {
+        const prevCount = prev[msg.chat_id] || 0;
+        return { ...prev, [msg.chat_id]: prevCount + 1 };
+      });
+
+      setFriends(prevFriends => {
+        const idx = prevFriends.findIndex(f => f.room_id === msg.chat_id);
+        if (idx === -1) return prevFriends;
+
+        const updated = [...prevFriends];
+        const friend = { ...updated[idx] };
+
+        friend.last_message = msg.content || (msg.fileUrl ? "File" : "");
+        friend.last_message_date = msg.sent_at || new Date().toISOString();
+
+        // Przesuń na początek listy
+        updated.splice(idx, 1);
+        updated.unshift(friend);
+
+        return updated;
+      });
+    }
+
+    function onUpdateUnreadCounts(data) {
+      const map = {};
+      data.forEach(({ chat_id, unread_count }) => {
+        map[chat_id] = unread_count;
+      });
+      setUnreadCounts(map);
+    }
+
+    socket.on("newMessage", onNewMessage);
+    socket.on("updateUnreadCounts", onUpdateUnreadCounts);
+
+    return () => {
+      socket.off("newMessage", onNewMessage);
+      socket.off("updateUnreadCounts", onUpdateUnreadCounts);
+    };
+  }, [socket]);
 
   async function handleFriendClick(friend) {
     try {
@@ -35,6 +100,9 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
       if (!res.ok) throw new Error("Failed to create or fetch room");
       const room = await res.json();
 
+      socket.emit("messagesRead", { chatId: room.room_id });
+      setUnreadCounts(prev => ({ ...prev, [room.room_id]: 0 }));
+
       onSelectedChat({
         room_id: room.room_id,
         user: friend,
@@ -46,7 +114,6 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
     }
   }
 
-  // Error state
   if (error) {
     return (
       <div className="chat-empty chat-error">
@@ -57,7 +124,6 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
     );
   }
 
-  // Empty state
   if (friends.length === 0) {
     return (
       <div className="chat-empty">
@@ -68,7 +134,6 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
     );
   }
 
-  // List of friends
   return (
     <div className="chat-page">
       <div className="chats-header">
@@ -99,6 +164,9 @@ export default function FriendList({ token, onSelectedChat, selectedChat }) {
                   : "No messages yet..."}
               </p>
             </div>
+            {unreadCounts[String(f.room_id)] > 0 && (
+              <div className="chat-unread-indicator">{(unreadCounts[String(f.room_id)] > 99) ? "99+" : unreadCounts[String(f.room_id)]}</div>
+            )}
           </div>
         ))}
       </div>

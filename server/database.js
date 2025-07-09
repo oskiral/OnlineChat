@@ -32,11 +32,21 @@ db.serialize(() => {
       fileUrl TEXT,
       sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       delivered BOOLEAN DEFAULT 0,
-      read_at DATETIME NULL,
       FOREIGN KEY (sender_id) REFERENCES users(user_id),
       FOREIGN KEY (chat_id) REFERENCES rooms(room_id)
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS message_reads (
+      message_id INTEGER,
+      user_id INTEGER,
+      read_at DATETIME,
+      PRIMARY KEY (message_id, user_id),
+      FOREIGN KEY (message_id) REFERENCES messages(message_id),
+      FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+    `)
 
   db.run(`
     CREATE TABLE IF NOT EXISTS rooms (
