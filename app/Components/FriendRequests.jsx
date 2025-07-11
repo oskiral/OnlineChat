@@ -4,7 +4,7 @@ export default function FriendRequests({ token, onAccept, onReject }) {
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:3001/friend-requests", {
+    fetch("http://localhost:3001/api/friends/friendRequests", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -15,7 +15,7 @@ export default function FriendRequests({ token, onAccept, onReject }) {
   }, [token]);
 
   const handleAccept = (senderId) => {
-    fetch("http://localhost:3001/friend-requests/accept", {
+    fetch("http://localhost:3001/api/friends/friendRequests/accept", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -29,7 +29,7 @@ export default function FriendRequests({ token, onAccept, onReject }) {
   };
 
   const handleReject = (senderId) => {
-    fetch("http://localhost:3001/friend-requests/reject", {
+    fetch("http://localhost:3001/api/friends/friendRequests/decline", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

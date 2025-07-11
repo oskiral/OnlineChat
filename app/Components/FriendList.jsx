@@ -9,7 +9,7 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
 
   async function fetchFriendsWithMessages() {
     try {
-      const res = await fetch("http://localhost:3001/friends-with-last-message", {
+      const res = await fetch("http://localhost:3001/api/friends/getFriendsWithLastMessage", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch friends");
@@ -90,7 +90,8 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
     try {
       const res = await fetch("http://localhost:3001/rooms", {
         method: "POST",
-        headers: {
+        headers:
+        {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },

@@ -8,12 +8,13 @@ export default function SettingsBlock({onLogout}) {
     const socket = useSocket();
 
     function handleLogout() {
+        console.log(socket.id);
         if (!socket?.id) {
         alert("Socket not ready");
         return;
         }
 
-        fetch("http://localhost:3001/logout", {
+        fetch("http://localhost:3001/api/auth/logout", {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`,

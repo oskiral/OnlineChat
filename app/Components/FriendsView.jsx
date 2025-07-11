@@ -15,7 +15,7 @@ export default function FriendsView() {
   // Fetch pending requests
   async function fetchFriendRequests() {
     try {
-      const res = await fetch("http://localhost:3001/friend-requests", {
+      const res = await fetch("http://localhost:3001/api/friends/friendRequests", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -30,7 +30,7 @@ export default function FriendsView() {
   // Fetch confirmed friends
   async function fetchFriends() {
     try {
-      const res = await fetch("http://localhost:3001/friends", {
+      const res = await fetch("http://localhost:3001/api/friends/getFriends", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch friends");
@@ -48,7 +48,7 @@ export default function FriendsView() {
     }
     setStatus("Sending request...");
     try {
-      const res = await fetch("http://localhost:3001/friend-requests/send", {
+      const res = await fetch("http://localhost:3001/api/friends/friendRequests/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

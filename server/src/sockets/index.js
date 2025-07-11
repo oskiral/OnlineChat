@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET;
+const {JWT_SECRET} = require('../config/config');
+
 const userSockets = new Map();
 
 const handleGetMessages = require("./handlers/handleGetMessages");

@@ -22,7 +22,7 @@ export default function Login({ onLogin }) {
       return;
     }
 
-    const endpoint = isRegistering ? "/register" : "/login";
+    const endpoint = isRegistering ? "/api/auth/register" : "/api/auth/login";
     try {
       const res = await fetch(`http://localhost:3001${endpoint}`, {
         method: "POST",

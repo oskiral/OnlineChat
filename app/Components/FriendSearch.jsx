@@ -13,7 +13,7 @@ export default function FriendSearch({ token }) {
     setStatus("Sending request…");
 
     try {
-      const res = await fetch("http://localhost:3001/friend-requests/send", {
+      const res = await fetch("http://localhost:3001/api/friends/friendRequests/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
