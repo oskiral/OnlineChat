@@ -1,6 +1,7 @@
 import "./Settings.css"
 import { LogOut } from "lucide-react";
 import { useSocket } from "../utils/socketProvider";
+import UserSettings from "./UserSettings";
 
 export default function SettingsBlock({onLogout}) {
     
@@ -33,6 +34,7 @@ export default function SettingsBlock({onLogout}) {
 
     return (
         <div className="settings-container">
+            <UserSettings />
             <div className="logout-btn" onClick={handleLogout}><LogOut size={18} />LOG OUT</div>
         </div>
     )
