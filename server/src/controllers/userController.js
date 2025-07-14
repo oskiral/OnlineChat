@@ -149,3 +149,6 @@ exports.userById = async (req, res) => {
     res.json(row);
   });
 };
+
+// exports.changeUsername = async (req, res) => {}
+// exports.changePassword = async (req, res) => {}
