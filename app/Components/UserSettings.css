@@ -2,7 +2,7 @@
   max-width: 400px;
   margin: 50px auto;
   padding: 20px;
-  background-color: #1a1a2e;
+  background-color: #1F2436;
   border-radius: 8px;
   color: #fff;
   font-family: sans-serif;
@@ -20,6 +20,8 @@
   margin-bottom: 20px;
 }
 
+
+
 .settings-form label {
   font-size: 14px;
   color: #ccc;
@@ -31,14 +33,14 @@
   padding: 10px;
   border: none;
   border-radius: 4px;
-  background-color: #252542;
+  background-color: #181C2F;
   color: #fff;
 }
 
 .settings-form button {
   padding: 10px;
   border: none;
-  background-color: #5562f3;
+  background-color: #2e89ff;
   color: white;
   border-radius: 4px;
   cursor: pointer;
@@ -46,7 +48,7 @@
 }
 
 .settings-form button:hover {
-  background-color: #3945e0;
+  background-color: #1877e0;
 }
 
 .settings-message {

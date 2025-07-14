@@ -1,9 +1,9 @@
 import { useState } from "react";
 import "./UserSettings.css";
+import Avatar from "./Avatar";
 
-export default function UserSettings() {
+export default function UserSettings({user, setUser}) {
   const [username, setUsername] = useState("");
-  const [avatar, setAvatar] = useState(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -25,23 +25,10 @@ export default function UserSettings() {
     console.log("test");
   };
 
-  const handleAvatarChange = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append("avatar", avatar);
-
-    try {
-      await axios.patch("/api/user/avatar", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setMessage("Avatar updated!");
-    } catch {
-      setMessage("Error updating avatar.");
-    }
-  };
+  function onAvatarUpload(newAvatarUrl) {
+    // change it localy
+    // setUser(prev => ({ ...prev, avatar: newAvatarUrl }));
+  }
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -72,14 +59,9 @@ export default function UserSettings() {
         <button type="submit">Update Username</button>
       </form>
 
-      <form onSubmit={handleAvatarChange} className="settings-form">
+      <form className="settings-form">
         <label>Change Avatar</label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setAvatar(e.target.files[0])}
-        />
-        <button type="submit">Update Avatar</button>
+        <Avatar user={user} token={user.token} onUpload={onAvatarUpload}/>
       </form>
 
       <form onSubmit={handlePasswordChange} className="settings-form">

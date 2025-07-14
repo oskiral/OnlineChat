@@ -1,12 +1,11 @@
-module.exports = (io, socket, db) => {
-  const {emitToUser} = require("../index");
+module.exports = (io, socket, db, userSocketMap) => {
   socket.on("newMessage", ({ chatId, content, fileUrl }) => {
     if (!chatId || (!content && !fileUrl)) {
       return socket.emit("error", { msg: "chatId and content or file are required" });
     }
 
-    const updatedFileUrl = fileUrl || null;
     const userId = socket.user_id;
+    const updatedFileUrl = fileUrl || null;
 
     if (!userId) {
       return socket.emit("error", { msg: "User ID missing in socket" });
@@ -26,36 +25,34 @@ module.exports = (io, socket, db) => {
       const messageId = this.lastID;
 
       db.get(`SELECT username FROM users WHERE user_id = ?`, [userId], (err, row) => {
-        if (err) {
+        if (err || !row) {
           console.error("DB select username error:", err);
-          return socket.emit("error", { msg: "DB select username error" });
+          return socket.emit("error", { msg: "Could not fetch username" });
         }
-
-        const username = row?.username || "Unknown";
 
         const message = {
           message_id: messageId,
           chat_id: chatId,
           sender_id: userId,
-          username,
+          sender_username: row.username,
           content,
           fileUrl: updatedFileUrl,
           sent_at: new Date().toISOString(),
         };
 
         db.all(`SELECT user_id FROM room_members WHERE room_id = ?`, [chatId], (err, rows) => {
-            if (err) {
-                console.error("Error fetching room members:", err);
-                return;
-            }
+          if (err) {
+            console.error("Error fetching room members:", err);
+            return;
+          }
 
-            rows.forEach(({ user_id }) => {
-            if (user_id !== userId) {
-                emitToUser(io, user_id, "newMessage", message);
+          rows.forEach(({ user_id }) => {
+            const socketId = userSocketMap.get(user_id);
+            if (socketId) {
+              io.to(socketId).emit("newMessage", message);
             }
-            });
+          });
         });
-
       });
     });
   });

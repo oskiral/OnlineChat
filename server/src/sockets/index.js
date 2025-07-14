@@ -93,7 +93,7 @@ function registerSocketHandlers(io, db) {
 
     // Rejestruj obsługę zdarzeń
     handleGetMessages(io, socket, db);
-    handleNewMessages(io, socket, db);
+    handleNewMessages(io, socket, db, userSockets);
     handleMarkMessagesRead(io, socket, db);
   });
 };
@@ -101,6 +101,6 @@ function registerSocketHandlers(io, db) {
 module.exports = {
   registerSocketHandlers,
   getSocketIdsForUser,
-  userSockets,
-  emitToUser
+  emitToUser,
+  userSockets
 };

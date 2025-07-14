@@ -43,9 +43,13 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
   }, []);
 
   useEffect(() => {
+    console.log(friends)
+  }, [friends])
+  useEffect(() => {
     if (!socket) return;
 
     function onNewMessage(msg) {
+      console.log("🔥 onNewMessage fired", msg);
       setUnreadCounts(prev => {
         const prevCount = prev[msg.chat_id] || 0;
         return { ...prev, [msg.chat_id]: prevCount + 1 };

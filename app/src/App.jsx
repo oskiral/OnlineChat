@@ -20,7 +20,7 @@ function App() {
       }
 
       try {
-        const res = await fetch("http://localhost:3001/me", {
+        const res = await fetch("http://localhost:3001/api/user/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Unauthorized");

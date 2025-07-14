@@ -15,8 +15,16 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
 
   const [readBy, setReadBy] = useState(new Set());
 
+
+  useEffect(() => {
+    console.log(messages);
+  }, [messages])
+
+  
  useEffect(() => {
   if (!socket || !selectedChat) return;
+
+  
 
   socket.emit("messagesRead", { chatId: selectedChat.room_id });
 
@@ -234,9 +242,9 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
           onChange={handleFileChange}
         />
         </div>*/}
-        <div class="file-input-wrapper">
-        <input onChange={handleFileChange} accept="image/*,application/pdf" type="file" class="file-upload-input" ref={inputFileRef}  />
-        <div class="file-upload-btn" onClick={clickFileInput}><img src="../media/image-down.svg" alt="Upload" /></div>
+        <div className="file-input-wrapper">
+        <input onChange={handleFileChange} accept="image/*,application/pdf" type="file" className="file-upload-input" ref={inputFileRef}  />
+        <div className="file-upload-btn" onClick={clickFileInput}><img src="../media/image-down.svg" alt="Upload" /></div>
       </div>
         <button className="chat-send-btn" onClick={handleSendMessage}>
           Send

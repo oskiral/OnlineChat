@@ -3,10 +3,12 @@ import { LogOut } from "lucide-react";
 import { useSocket } from "../utils/socketProvider";
 import UserSettings from "./UserSettings";
 
-export default function SettingsBlock({onLogout}) {
+export default function SettingsBlock({onLogout, user}) {
     
-    const token = localStorage.getItem("token");
+    const token = user.token;
     const socket = useSocket();
+
+    
 
     function handleLogout() {
         console.log(socket.id);
@@ -34,7 +36,7 @@ export default function SettingsBlock({onLogout}) {
 
     return (
         <div className="settings-container">
-            <UserSettings />
+            <UserSettings user={user}/>
             <div className="logout-btn" onClick={handleLogout}><LogOut size={18} />LOG OUT</div>
         </div>
     )

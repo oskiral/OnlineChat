@@ -43,7 +43,7 @@ export default function FriendRequestCard({ user, token, onResponse }) {
     }
     return (
     <div className="friend-card">
-      <img src={user.avatar || "/media/default.jpg"} className="avatar" />
+      <img src={user.avatar || "/media/default.jpg"} width={50} height={50} className="avatar" />
       <span className="username">{user.username}</span>
       <div className="actions">
         <button className="accept" onClick={handleAccept}>Accept</button>
