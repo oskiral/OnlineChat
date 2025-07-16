@@ -8,6 +8,15 @@ module.exports = function createRoomService(db) {
   const all = promisify(db.all).bind(db);
   const run = promisify(db.run).bind(db);
 
+  function notifyUsersRoomCreated(io, userIds, room) {
+    userIds.forEach(userId => {
+      const socketId = getSocketIdsForUser(userId)[0]; // Twoja funkcja mapująca userId → socketId
+      if (socketId) {
+        io.to(socketId).emit('roomCreated', room);
+      }
+    });
+  }
+
   /**
    * Sprawdza, czy użytkownik jest członkiem danego pokoju.
    * Zwraca obiekt wiersza lub undefined.

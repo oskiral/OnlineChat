@@ -1,3 +1,7 @@
+const db = require("../config/database.js");
+const createRoomService = require('./utils/room.js');
+const roomService = createRoomService(db);
+
 
 // get
 exports.getRooms = (req, res) => {
@@ -23,7 +27,7 @@ exports.postRooms = async (req, res) => {
       // 1) Check for existing direct room between these two users
       const existing = await roomService.getDirectRoom(user.user_id, memberId);
       if (existing) {
-        notifyUsersRoomCreated(io, [user.user_id, memberId], existing);
+        roomService.notifyUsersRoomCreated(io, [user.user_id, memberId], existing);
         return res.status(200).json(existing);
       }
 
@@ -33,7 +37,7 @@ exports.postRooms = async (req, res) => {
       await roomService.addUserToRoom(memberId, roomId);
 
       const newRoom = { room_id: roomId, is_group: 0, name: null };
-      notifyUsersRoomCreated(io, [user.user_id, memberId], newRoom);
+      roomService.notifyUsersRoomCreated(io, [user.user_id, memberId], newRoom);
       return res.status(201).json(newRoom);
     }
 
@@ -48,7 +52,7 @@ exports.postRooms = async (req, res) => {
       // In future you’ll add extra members here, e.g. req.body.memberIds
 
       const newRoom = { room_id: roomId, is_group: 1, name: name.trim() };
-      notifyUsersRoomCreated(io, [user.user_id], newRoom);
+      roomService.notifyUsersRoomCreated(io, [user.user_id], newRoom);
       return res.status(201).json(newRoom);
     }
 

@@ -11,7 +11,7 @@ exports.uploadAvatar = async (req, res) => {
   
   // Construct the file URL based on the environment variable or default to localhost
   const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT}`;
-  const fileUrl = `${baseUrl}/uploads/avatars/${req.file.filename}`;
+  const fileUrl = `${baseUrl}/src//uploads/avatars/${req.file.filename}`;
   const username = req.user.username;
   
 
