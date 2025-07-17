@@ -1,6 +1,6 @@
-import "./UserPanel.css";
+import "../../styles/UserPanel.css";
 import Avatar from "./Avatar";
-import { useSocket } from "../utils/socketProvider";
+import { useSocket } from "../../contexts/SocketProvider";
 
 export default function UserPanel({ user, setUser, onLogout, token}) {
     
@@ -58,4 +58,3 @@ export default function UserPanel({ user, setUser, onLogout, token}) {
         </div>
     );
 }
-// This component displays the user's username and a logout button.

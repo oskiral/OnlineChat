@@ -95,9 +95,132 @@ npm run dev
 
 3. Open your browser and navigate to `http://localhost:5173`
 
-## API Endpoints
+### Alternative: Manual Setup
 
-### Authentication
+If you prefer to run servers manually:
+
+1. Start the backend:
+```bash
+cd server
+npm run dev
+```
+
+2. Start the frontend (in a new terminal):
+```bash
+cd app
+npm run dev
+
+## Project Structure
+
+### Frontend (app/)
+```
+app/
+├── public/
+│   └── media/                 # Static assets (icons, images)
+├── src/
+│   ├── App.jsx               # Main application component
+│   ├── main.jsx              # React entry point
+│   ├── index.css             # Global styles
+│   ├── constants.js          # API endpoints and constants
+│   └── contexts/
+│       └── SocketProvider.jsx # Socket.IO context provider
+├── Components/               # React components (current structure)
+│   ├── AppLayout.jsx         # Main layout component
+│   ├── Sidebar.jsx           # Navigation sidebar
+│   ├── RightPanel.jsx        # Main content area
+│   ├── Chat.jsx              # Chat interface
+│   ├── FriendList.jsx        # Friends list component
+│   ├── Login.jsx             # Authentication form
+│   ├── UserPanel.jsx         # User profile panel
+│   ├── Avatar.jsx            # Avatar component
+│   ├── Settings*.jsx         # Settings components
+│   ├── Friend*.jsx           # Friend-related components
+│   └── *.css                 # Component styles
+├── utils/
+│   └── resizeImage.js        # Image processing utilities
+├── package.json              # Frontend dependencies
+└── vite.config.js            # Vite configuration
+```
+
+### Backend (server/)
+```
+server/
+├── src/
+│   ├── index.js              # Server entry point
+│   ├── config/
+│   │   ├── database.js       # SQLite database setup
+│   │   ├── config.js         # Environment configuration
+│   │   └── chat.db           # SQLite database file
+│   ├── controllers/          # Route handlers
+│   │   ├── authController.js # Authentication logic
+│   │   ├── userController.js # User management
+│   │   ├── friendsController.js # Friends system
+│   │   ├── messageController.js # Message handling
+│   │   └── roomController.js # Chat rooms
+│   ├── middleware/           # Express middleware
+│   │   ├── authenticate.js   # JWT authentication
+│   │   ├── uploadAvatar.js   # Avatar upload handling
+│   │   └── uploadFile.js     # File upload handling
+│   ├── routes/               # API routes
+│   │   ├── authRoutes.js     # Authentication endpoints
+│   │   ├── userRoutes.js     # User endpoints
+│   │   ├── friendRoutes.js   # Friends endpoints
+│   │   ├── messageRoutes.js  # Message endpoints
+│   │   └── roomRoutes.js     # Room endpoints
+│   ├── sockets/              # Socket.IO handlers
+│   │   ├── index.js          # Socket connection management
+│   │   └── handlers/         # Event handlers
+│   │       ├── handleGetMessages.js
+│   │       ├── handleNewMessage.js
+│   │       └── handleMarkMessagesRead.js
+│   ├── utils/                # Utility functions
+│   │   ├── ioInstance.js     # Socket.IO instance management
+│   │   └── room.js           # Room management utilities
+│   └── uploads/              # User uploaded files
+│       └── avatars/          # User avatar images
+├── package.json              # Backend dependencies
+└── .env                      # Environment variables
+```
+
+### Future Structure Improvements
+
+**📖 See [FRONTEND_STRUCTURE.md](./FRONTEND_STRUCTURE.md) for detailed reorganization guide**
+
+The frontend structure can be improved by organizing components into logical groups:
+
+```
+src/
+├── components/
+│   ├── layout/              # Layout components
+│   │   ├── AppLayout.jsx
+│   │   ├── Sidebar.jsx
+│   │   └── RightPanel.jsx
+│   ├── auth/                # Authentication components
+│   │   └── Login.jsx
+│   ├── chat/                # Chat-related components
+│   │   └── Chat.jsx
+│   ├── friends/             # Friend system components
+│   │   ├── FriendList.jsx
+│   │   ├── FriendCard.jsx
+│   │   ├── FriendRequests.jsx
+│   │   ├── FriendSearch.jsx
+│   │   └── FriendsView.jsx
+│   ├── settings/            # Settings components
+│   │   ├── SettingsBlock.jsx
+│   │   └── UserSettings.jsx
+│   └── ui/                  # Reusable UI components
+│       ├── Avatar.jsx
+│       └── UserPanel.jsx
+├── pages/                   # Page components
+│   └── FriendsPage.jsx
+├── hooks/                   # Custom React hooks
+├── utils/                   # Utility functions
+├── contexts/                # React contexts
+├── styles/                  # CSS files
+└── constants.js             # Application constants
+```
+
+## API Endpoints
 - `POST /api/auth/register` - Register a new user
 - `POST /api/auth/login` - Login user
 - `POST /api/auth/logout` - Logout user
@@ -163,6 +286,59 @@ OnlineChat/
 ## Development
 
 The application uses SQLite for the database, which is automatically created when the server starts. The database includes tables for users, messages, rooms, friendships, friend requests, sessions, and message reads.
+
+## Development Guidelines
+
+### Code Organization
+- Keep components small and focused on a single responsibility
+- Use descriptive names for components, functions, and variables
+- Group related components in logical folders
+- Separate business logic from UI components
+
+### State Management
+- Use React Context for global state (Socket, User)
+- Keep local state in components when possible
+- Implement proper state cleanup in useEffect hooks
+
+### API Integration
+- Use constants for API endpoints (see `src/constants.js`)
+- Implement proper error handling for API calls
+- Add loading states for better UX
+
+### Socket.IO Best Practices
+- Handle connection/disconnection gracefully
+- Implement proper event cleanup
+- Use namespaces for different types of events
+
+### Performance Considerations
+- Implement message pagination for large chat histories
+- Use React.memo for frequently re-rendering components
+- Optimize image uploads with compression
+
+## Planned Improvements
+
+### Frontend Structure
+- [ ] Reorganize components into logical folders (`components/`, `pages/`, `hooks/`)
+- [ ] Move CSS files to dedicated `styles/` folder
+- [ ] Create reusable UI component library
+- [ ] Implement custom hooks for API calls and socket events
+
+### Features
+- [ ] Group chat support
+- [ ] Message reactions and replies
+- [ ] File sharing improvements
+- [ ] Push notifications
+- [ ] Dark/Light theme toggle
+- [ ] Message search functionality
+- [ ] User status indicators (online/offline)
+
+### Technical Improvements
+- [ ] Add TypeScript for better type safety
+- [ ] Implement proper error boundaries
+- [ ] Add unit and integration tests
+- [ ] Set up CI/CD pipeline
+- [ ] Add Docker containerization
+- [ ] Implement message caching with Redis
 
 ## Contributing
 

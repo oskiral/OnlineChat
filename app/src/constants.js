@@ -24,7 +24,7 @@ export const API_ENDPOINTS = {
   ROOMS: '/api/rooms',
   MESSAGES: {
     UNREAD_COUNTS: '/api/messages/unread-counts',
-    UPLOAD: '/upload',
+    UPLOAD: '/api/upload',
   },
 };
 
@@ -41,3 +41,4 @@ export const SOCKET_EVENTS = {
   FRIEND_ADDED: 'friend-added',
   FORCE_LOGOUT: 'forceLogout',
 };
+

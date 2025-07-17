@@ -1,4 +1,3 @@
-
 export default function Sidebar({setActiveView, activeView}) {
     return (
         <aside className="sidebar">

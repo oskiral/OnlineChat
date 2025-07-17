@@ -46,8 +46,11 @@ module.exports = (io, socket, db, userSockets, getSocketIdsForUser) => {
             return;
           }
 
+          console.log(`📡 Broadcasting message ${messageId} to room ${chatId} members:`, rows.map(r => r.user_id));
+
           rows.forEach(({ user_id }) => {
             const socketIds = getSocketIdsForUser(user_id);
+            console.log(`📤 Sending to user ${user_id}, sockets:`, socketIds);
             socketIds.forEach(socketId => {
               io.to(socketId).emit("newMessage", message);
             });

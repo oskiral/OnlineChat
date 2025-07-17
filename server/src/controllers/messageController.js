@@ -5,9 +5,17 @@ const db = require("../config/database"); // Make sure this path matches your db
 // Uses multer to handle file uploads and returns the file URL
 // upload.single('file')
 exports.upload = (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  console.log('📤 Upload request received');
+  console.log('📁 File info:', req.file);
+  console.log('👤 User info:', req.user);
+  
+  if (!req.file) {
+    console.log('❌ No file uploaded');
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
 
   const fileUrl = `/uploads/${req.file.filename}`;
+  console.log('✅ File uploaded successfully:', fileUrl);
   res.json({ fileUrl });
 };
 

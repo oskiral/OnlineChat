@@ -1,7 +1,7 @@
-import Chat from "./Chat";
-import FriendList from "./FriendList";
-import FriendsView from "./FriendsView";
-import SettingsBlock from "./SettingsBlock";
+import Chat from "../chat/Chat";
+import FriendList from "../friends/FriendList";
+import FriendsView from "../friends/FriendsView";
+import SettingsBlock from "../settings/SettingsBlock";
 
 export default function RightPanel({user, setUser, onLogout, selectedChat, onSelectedChat, activeView}) {
 

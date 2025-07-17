@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import Login from "../Components/Login";
-import AppLayout from "../Components/AppLayout";
-
-import { SocketProvider } from "../utils/socketProvider";
+import Login from "./components/auth/Login";
+import AppLayout from "./components/layout/AppLayout";
+import { SocketProvider } from "./contexts/SocketProvider";
 
 
 function App() {
@@ -65,7 +64,7 @@ function App() {
     // This ensures that we have the latest user information, including avatar.
     // If the token is invalid or expired, this will throw an error.
     try {
-      const res = await fetch("http://localhost:3001/me", {
+      const res = await fetch("http://localhost:3001/api/user/me", {
         headers: { Authorization: `Bearer ${userData.token}` }
       });
       if (!res.ok) throw new Error("Failed to fetch user data");

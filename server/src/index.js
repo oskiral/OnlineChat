@@ -28,9 +28,6 @@ app.use("/api/user", userRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/messages", messageRoutes);
 
-const {registerSocketHandlers} = require("./sockets/index.js");
-const { setIoInstance } = require("./utils/ioInstance.js");
-
 
 const port = config.port;
 
@@ -50,7 +47,7 @@ registerSocketHandlers(io, db);
 
 // Serve static files from the 'uploads' directory
 // This allows the client to access uploaded files via URLs
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 
 

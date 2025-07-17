@@ -1,6 +1,6 @@
-import resizeImage from "../utils/resizeImage";
-import "./Avatar.css";
-import { useRef} from "react";
+import resizeImage from "../../utils/resizeImage";
+import "../../styles/Avatar.css";
+import { useRef } from "react";
 
 export default function Avatar({ user, onUpload, token}) {
     const fileInputRef = useRef(null);
@@ -86,6 +86,3 @@ export default function Avatar({ user, onUpload, token}) {
         </div>
     );
 }
-// This component allows the user to upload and display their avatar.
-// It uses a file input to select an image, resizes it, and uploads it to the server.
-// The avatar is displayed as an image, and clicking it opens the file selector.
