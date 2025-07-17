@@ -109,11 +109,11 @@ npm run dev
 ```bash
 cd app
 npm run dev
-
+```
 ## Project Structure
 
 ### Frontend (app/)
-```
+```text
 app/
 ├── public/
 │   └── media/                 # Static assets (icons, images)
@@ -143,7 +143,7 @@ app/
 ```
 
 ### Backend (server/)
-```
+```text
 server/
 ├── src/
 │   ├── index.js              # Server entry point
@@ -180,44 +180,6 @@ server/
 │       └── avatars/          # User avatar images
 ├── package.json              # Backend dependencies
 └── .env                      # Environment variables
-```
-
-### Future Structure Improvements
-
-**📖 See [FRONTEND_STRUCTURE.md](./FRONTEND_STRUCTURE.md) for detailed reorganization guide**
-
-The frontend structure can be improved by organizing components into logical groups:
-
-```
-src/
-├── components/
-│   ├── layout/              # Layout components
-│   │   ├── AppLayout.jsx
-│   │   ├── Sidebar.jsx
-│   │   └── RightPanel.jsx
-│   ├── auth/                # Authentication components
-│   │   └── Login.jsx
-│   ├── chat/                # Chat-related components
-│   │   └── Chat.jsx
-│   ├── friends/             # Friend system components
-│   │   ├── FriendList.jsx
-│   │   ├── FriendCard.jsx
-│   │   ├── FriendRequests.jsx
-│   │   ├── FriendSearch.jsx
-│   │   └── FriendsView.jsx
-│   ├── settings/            # Settings components
-│   │   ├── SettingsBlock.jsx
-│   │   └── UserSettings.jsx
-│   └── ui/                  # Reusable UI components
-│       ├── Avatar.jsx
-│       └── UserPanel.jsx
-├── pages/                   # Page components
-│   └── FriendsPage.jsx
-├── hooks/                   # Custom React hooks
-├── utils/                   # Utility functions
-├── contexts/                # React contexts
-├── styles/                  # CSS files
-└── constants.js             # Application constants
 ```
 
 ## API Endpoints
