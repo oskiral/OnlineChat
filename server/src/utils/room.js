@@ -1,6 +1,7 @@
 // server/services/room.js
 
 const { promisify } = require("util");
+const { getSocketIdsForUser } = require("../sockets/index.js");
 
 module.exports = function createRoomService(db) {
   // Promisify podstawowych metod SQLite
@@ -152,6 +153,7 @@ module.exports = function createRoomService(db) {
 
 
   return {
+    notifyUsersRoomCreated,
     checkRoomAccess,
     getUserRooms,
     createRoom,

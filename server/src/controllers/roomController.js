@@ -1,13 +1,14 @@
 const db = require("../config/database.js");
-const createRoomService = require('./utils/room.js');
+const createRoomService = require("../utils/room.js");
+const { getIoInstance } = require("../utils/ioInstance.js");
 const roomService = createRoomService(db);
 
 
 // get
 exports.getRooms = (req, res) => {
   const user = req.user;
-  roomService.getUserRoomsWithLastMessages(user)
-  .then((rooms) => res.json())
+  roomService.getUserRoomsWithLastMessages(user.user_id)
+  .then((rooms) => res.json(rooms))
   .catch(err => {
     console.log("Error fetching rooms of the user");
     res.status(500).json({error: "Failed to fetch the rooms"})
@@ -20,6 +21,7 @@ exports.getRooms = (req, res) => {
 exports.postRooms = async (req, res) => {
   const { memberId, name, is_group } = req.body;
   const user = req.user;
+  const io = getIoInstance();
 
   try {
     // —— DIRECT CHAT ——

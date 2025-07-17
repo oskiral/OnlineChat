@@ -15,16 +15,12 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
 
   const [readBy, setReadBy] = useState(new Set());
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   useEffect(() => {
-    console.log(messages);
-  }, [messages])
-
-  
- useEffect(() => {
-  if (!socket || !selectedChat) return;
-
-  
+    if (!socket || !selectedChat) return;
 
   socket.emit("messagesRead", { chatId: selectedChat.room_id });
 
@@ -46,22 +42,21 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
       msg.sender_id = msg.user.user_id;
     }
     if (String(msg.chat_id) !== String(selectedChat.room_id)) return;
+    
+    // Don't add the message if it's from the current user (already added optimistically)
+    if (msg.sender_id === user.user_id) return;
+    
     setMessages((prev) => [...prev, msg]);
   };
 
   function onMessagesReadConfirmation({ chatId }) {
-    console.log(1);
-    console.log(chatId);
     if (chatId === selectedChat.room_id) {
-      console.log(2);
       setReadBy(new Set());
     }
   }
 
   function onMessageReadBy({ chatId, readerId }) {
-    console.log(3);
     if (chatId !== selectedChat.room_id) return;
-    console.log(4);
     setReadBy(prev => new Set([...prev, readerId]));
   }
 
@@ -206,7 +201,6 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
       <div className="chat-messages">
         {messages.map((msg, i) => (
           <div key={msg.message_id} className={"chat-message " + (msg.sender_id === user.user_id ? "message-mine" : "message-other")}>
-            {/* <div className="chat-message-user">{msg.username || msg.user || "Unknown"}</div> */}
             <div className="chat-message-content">{msg.content}</div>
             {msg.fileUrl && (
               /\.(jpeg|jpg|gif|png)$/i.test(msg.fileUrl) ? (
@@ -231,17 +225,6 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
         />
-        {/* <div className="file-input-wrapper">
-        <label htmlFor="fileUpload" className="chat-file-label">
-          {selectedFile ? "File ready" : "Attach"}
-        </label>
-        <input
-          type="file"
-          id="fileUpload"
-          className="chat-file-input"
-          onChange={handleFileChange}
-        />
-        </div>*/}
         <div className="file-input-wrapper">
         <input onChange={handleFileChange} accept="image/*,application/pdf" type="file" className="file-upload-input" ref={inputFileRef}  />
         <div className="file-upload-btn" onClick={clickFileInput}><img src="../media/image-down.svg" alt="Upload" /></div>

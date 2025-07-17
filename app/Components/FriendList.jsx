@@ -22,7 +22,7 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
 
   async function fetchUnreadCounts() {
     try {
-      const res = await fetch("http://localhost:3001/unread-counts", {
+      const res = await fetch("http://localhost:3001/api/messages/unread-counts", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch unread counts");
@@ -31,7 +31,13 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
       data.forEach(({ chat_id, unread_count }) => {
         map[chat_id] = unread_count;
       });
-      setUnreadCounts(map);
+      setUnreadCounts(prev => {
+        const updated = { ...prev };
+        data.forEach(({ chat_id, unread_count }) => {
+          updated[chat_id] = unread_count;
+        });
+        return updated;
+      });
     } catch (err) {
       console.error("Unread counts fetch error", err);
     }
@@ -43,18 +49,18 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
   }, []);
 
   useEffect(() => {
-    console.log(friends)
-  }, [friends])
-  useEffect(() => {
     if (!socket) return;
 
     function onNewMessage(msg) {
-      console.log("🔥 onNewMessage fired", msg);
-      setUnreadCounts(prev => {
-        const prevCount = prev[msg.chat_id] || 0;
-        return { ...prev, [msg.chat_id]: prevCount + 1 };
-      });
+      // Update unread counts only if the message is not from the current user
+      if (msg.sender_id !== user.user_id) {
+        setUnreadCounts(prev => {
+          const prevCount = prev[msg.chat_id] || 0;
+          return { ...prev, [msg.chat_id]: prevCount + 1 };
+        });
+      }
 
+      // Update friends list with new last message
       setFriends(prevFriends => {
         const idx = prevFriends.findIndex(f => f.room_id === msg.chat_id);
         if (idx === -1) return prevFriends;
@@ -62,10 +68,13 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
         const updated = [...prevFriends];
         const friend = { ...updated[idx] };
 
+        // Update last message fields
         friend.last_message = msg.content || (msg.fileUrl ? "File" : "");
         friend.last_message_date = msg.sent_at || new Date().toISOString();
+        friend.last_sender_username = msg.sender_username;
+        friend.last_file_url = msg.fileUrl || null;
 
-        // Przesuń na początek listy
+        // Move to top of the list
         updated.splice(idx, 1);
         updated.unshift(friend);
 
@@ -81,18 +90,24 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
       setUnreadCounts(map);
     }
 
+    function onMessagesReadConfirmation({ chatId }) {
+      setUnreadCounts(prev => ({ ...prev, [chatId]: 0 }));
+    }
+
     socket.on("newMessage", onNewMessage);
     socket.on("updateUnreadCounts", onUpdateUnreadCounts);
+    socket.on("messagesReadConfirmation", onMessagesReadConfirmation);
 
     return () => {
       socket.off("newMessage", onNewMessage);
       socket.off("updateUnreadCounts", onUpdateUnreadCounts);
+      socket.off("messagesReadConfirmation", onMessagesReadConfirmation);
     };
   }, [socket]);
 
   async function handleFriendClick(friend) {
     try {
-      const res = await fetch("http://localhost:3001/rooms", {
+      const res = await fetch("http://localhost:3001/api/rooms", {
         method: "POST",
         headers:
         {

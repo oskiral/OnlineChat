@@ -1,4 +1,4 @@
-module.exports = (io, socket, db, userSocketMap) => {
+module.exports = (io, socket, db, userSockets, getSocketIdsForUser) => {
   socket.on("newMessage", ({ chatId, content, fileUrl }) => {
     if (!chatId || (!content && !fileUrl)) {
       return socket.emit("error", { msg: "chatId and content or file are required" });
@@ -47,10 +47,10 @@ module.exports = (io, socket, db, userSocketMap) => {
           }
 
           rows.forEach(({ user_id }) => {
-            const socketId = userSocketMap.get(user_id);
-            if (socketId) {
+            const socketIds = getSocketIdsForUser(user_id);
+            socketIds.forEach(socketId => {
               io.to(socketId).emit("newMessage", message);
-            }
+            });
           });
         });
       });

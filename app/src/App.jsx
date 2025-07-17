@@ -1,4 +1,4 @@
-import { useState, useEffect, act } from "react";
+import { useState, useEffect } from "react";
 import Login from "../Components/Login";
 import AppLayout from "../Components/AppLayout";
 
@@ -97,23 +97,6 @@ function App() {
         activeView={activeView}
         setActiveView={setActiveView}
       />
-      {/* <div style={{display : "flex"}}>
-        <div>
-          <FriendsPage onSelectedChat={(chat) => setSelectedChat(chat)} selectedChat={selectedChat}/>
-          <FriendRequests token={user.token} />
-        </div>
-        <div>
-          <UserPanel
-            user={user}
-            setUser={setUser}
-            onLogout={handleLogout}
-            token={user.token}
-            onUpload={(url) => setUser((prev) => ({ ...prev, avatar: url }))}
-          />
-          <Chat user={user} token={user.token} onLogout={handleLogout}  setUser={setUser} selectedChat={selectedChat}/>
-        </div>
-      </div> */}
-      
     </SocketProvider>
   ) : (
     <Login onLogin={handleLogin} />

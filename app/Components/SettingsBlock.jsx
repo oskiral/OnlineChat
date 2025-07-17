@@ -4,17 +4,13 @@ import { useSocket } from "../utils/socketProvider";
 import UserSettings from "./UserSettings";
 
 export default function SettingsBlock({onLogout, user}) {
-    
     const token = user.token;
     const socket = useSocket();
 
-    
-
     function handleLogout() {
-        console.log(socket.id);
         if (!socket?.id) {
-        alert("Socket not ready");
-        return;
+            alert("Socket not ready");
+            return;
         }
 
         fetch("http://localhost:3001/api/auth/logout", {

@@ -6,7 +6,6 @@ module.exports = (io, socket, db) => {
     console.log("messagesRead event received", { userId, chatId });
 
     if (!userId || !chatId) {
-      console.log("Missing userId or chatId");
       return;
     }
 
@@ -27,7 +26,6 @@ module.exports = (io, socket, db) => {
       console.log("Unread messages found:", rows.length, rows);
 
       if (!rows.length) {
-        console.log("No unread messages to mark read");
         return;
       }
 
@@ -48,7 +46,6 @@ module.exports = (io, socket, db) => {
           console.error("Error marking messages read:", err);
           return;
         }
-        console.log("Emitting messagesReadConfirmation to user", userId);
         io.to(`user:${userId}`).emit("messagesReadConfirmation", { chatId });
 
         // Pobierz najwyższe message_id spośród przeczytanych właśnie wiadomości
@@ -68,7 +65,6 @@ module.exports = (io, socket, db) => {
           // Nie wysyłaj powiadomienia do siebie
           if (senderId === userId) return;
 
-          console.log(`Emitting messageReadBy to sender ${senderId}, reader ${userId}`);
           // Wyślij event do nadawcy, że wiadomość została przeczytana przez userId
           io.to(`user:${senderId}`).emit("messageReadBy", {
             chatId,

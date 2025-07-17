@@ -29,27 +29,20 @@ function emitToUser(io, userId, event, data) {
 function registerSocketHandlers(io, db) {
   // Autoryzacja socketów na podstawie tokenu JWT
   io.use((socket, next) => {
-    console.log("Socket trying to connect", socket.handshake.auth);
-
     const token = socket.handshake.auth.token;
     if (!token) {
-      console.log("No token in handshake");
       return next(new Error("No token"));
     }
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
       if (err) {
-        console.log("JWT verify error", err);
         return next(new Error("Invalid token"));
       }
-
-      console.log("Decoded token:", decoded);
 
       const username = decoded.username;
       const userId = decoded.user_id;
 
       if (!username || !userId) {
-        console.log(`userId: ${userId}\nusername: ${username}`);
         return next(new Error("Invalid token payload"));
       }
 
@@ -68,15 +61,7 @@ function registerSocketHandlers(io, db) {
 
   // Obsługa zdarzeń po nawiązaniu połączenia
   io.on("connection", (socket) => {
-    console.log("✅ Socket connected:", socket.id);
-
     socket.join(`user:${socket.user_id}`);
-    
-
-    // Debugowanie - logowanie wszystkich odebranych eventów (opcjonalne)
-    socket.onAny((event, ...args) => {
-      console.log(`📥 Socket ${socket.id} received event '${event}':`, args);
-    });
 
     // Obsługa rozłączenia i usuwanie socketów z mapy
     socket.on("disconnect", () => {
@@ -88,12 +73,11 @@ function registerSocketHandlers(io, db) {
           userSockets.delete(userId);
         }
       }
-      console.log(`❌ Socket disconnected: ${socket.id}`);
     });
 
     // Rejestruj obsługę zdarzeń
     handleGetMessages(io, socket, db);
-    handleNewMessages(io, socket, db, userSockets);
+    handleNewMessages(io, socket, db, userSockets, getSocketIdsForUser);
     handleMarkMessagesRead(io, socket, db);
   });
 };

@@ -1,3 +1,5 @@
+const db = require("../config/database"); // Make sure this path matches your db file
+
 
 // Endpoint to upload files
 // Uses multer to handle file uploads and returns the file URL
@@ -11,9 +13,9 @@ exports.upload = (req, res) => {
 
 exports.unreadCounts = (req, res) => {
   const userId = req.user.user_id;
-  
+
   const sql = `
-  SELECT m.chat_id, COUNT (*) as unread_count
+  SELECT m.chat_id, COUNT(*) as unread_count
   FROM messages m
   JOIN room_members rm ON rm.room_id = m.chat_id AND rm.user_id = ?
   LEFT JOIN message_reads mr ON mr.message_id = m.message_id AND mr.user_id = ?

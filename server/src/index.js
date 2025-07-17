@@ -1,14 +1,13 @@
 const express = require('express');
-
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-const db = require("./config/database.js")
-const multer = require('multer');
-const config = require("./config/config.js");
-const fs = require('fs');
 const path = require('path');
 
+const db = require("./config/database.js");
+const config = require("./config/config.js");
+const { registerSocketHandlers } = require("./sockets/index.js");
+const { setIoInstance } = require("./utils/ioInstance.js");
 
 const app = express();
 
@@ -16,11 +15,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const authRoutes = require("../src/routes/authRoutes.js");
-const friendRoutes = require("../src/routes/friendRoutes.js");
-const userRoutes = require("../src/routes/userRoutes.js");
-const roomRoutes = require("../src/routes/roomRoutes.js");
-const messageRoutes = require("../src/routes/messageRoutes.js");
+// Routes
+const authRoutes = require("./routes/authRoutes.js");
+const friendRoutes = require("./routes/friendRoutes.js");
+const userRoutes = require("./routes/userRoutes.js");
+const roomRoutes = require("./routes/roomRoutes.js");
+const messageRoutes = require("./routes/messageRoutes.js");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/friends", friendRoutes);
@@ -28,7 +28,8 @@ app.use("/api/user", userRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/messages", messageRoutes);
 
-const {registerSocketHandlers, getSocketIdsForUser} = require("./sockets/index.js");
+const {registerSocketHandlers} = require("./sockets/index.js");
+const { setIoInstance } = require("./utils/ioInstance.js");
 
 
 const port = config.port;
@@ -41,6 +42,10 @@ const io = new Server(server, {
     origin: '*',
   }
 });
+
+// Set the IO instance globally for other modules to use
+setIoInstance(io);
+
 registerSocketHandlers(io, db);
 
 // Serve static files from the 'uploads' directory

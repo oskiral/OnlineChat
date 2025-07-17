@@ -98,3 +98,10 @@
 .search-button:active {
   transform: scale(0.98);
 }
+.avatar-request {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 1rem;
+}
