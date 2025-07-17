@@ -317,12 +317,6 @@ The application uses SQLite for the database, which is automatically created whe
 
 ## Planned Improvements
 
-### Frontend Structure
-- [ ] Reorganize components into logical folders (`components/`, `pages/`, `hooks/`)
-- [ ] Move CSS files to dedicated `styles/` folder
-- [ ] Create reusable UI component library
-- [ ] Implement custom hooks for API calls and socket events
-
 ### Features
 - [ ] Group chat support
 - [ ] Message reactions and replies
@@ -332,13 +326,6 @@ The application uses SQLite for the database, which is automatically created whe
 - [ ] Message search functionality
 - [ ] User status indicators (online/offline)
 
-### Technical Improvements
-- [ ] Add TypeScript for better type safety
-- [ ] Implement proper error boundaries
-- [ ] Add unit and integration tests
-- [ ] Set up CI/CD pipeline
-- [ ] Add Docker containerization
-- [ ] Implement message caching with Redis
 
 ## Contributing
 
