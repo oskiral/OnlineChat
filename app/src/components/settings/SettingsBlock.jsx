@@ -6,7 +6,7 @@ import UserSettings from "./UserSettings";
 
 export default function SettingsBlock({onLogout, user}) {
     const token = user.token;
-    const socket = useSocket();
+    const { socket } = useSocket();
 
     function handleLogout() {
         if (!socket?.id) {

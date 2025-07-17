@@ -11,8 +11,8 @@ export default function Sidebar({setActiveView, activeView}) {
                 <div className={(activeView == "friends") ?  "menu-option active" : "menu-option"} onClick={() => setActiveView("friends")}>
                     <img src="/media/users.svg" alt="Users" className="sidebar-icon" />
                 </div>
-                <div className={(activeView == "settings") ?  "menu-option active" : "menu-option"}>
-                    <img src="/media/settings.svg" alt="Settings" className="sidebar-icon" onClick={() => setActiveView("settings")} />
+                <div className={(activeView == "settings") ?  "menu-option active" : "menu-option"} onClick={() => setActiveView("settings")}>
+                    <img src="/media/settings.svg" alt="Settings" className="sidebar-icon" />
                 </div>
             </div>
             <h2 className="owebdev">OWEBDEV</h2>

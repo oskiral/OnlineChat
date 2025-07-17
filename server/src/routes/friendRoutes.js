@@ -5,9 +5,9 @@ const router = express.Router();
 
 router.get("/getFriendsWithLastMessage", authenticate, friendsController.getFriendsWithLastMessage);
 router.get("/getFriends", authenticate, friendsController.getFriends);
-router.get("/FriendRequests", authenticate, friendsController.getFriendRequests);
+router.get("/friendRequests", authenticate, friendsController.getFriendRequests);
 router.post("/friendRequests/send", authenticate, friendsController.friendRequestSend);
 router.post("/friendRequests/accept", authenticate, friendsController.friendRequestAccept);
-router.post("friendRequests/decline", authenticate, friendsController.friendRequestDecline);
+router.post("/friendRequests/decline", authenticate, friendsController.friendRequestDecline);
 
 module.exports = router;

@@ -1,7 +1,8 @@
 const jwt = require("jsonwebtoken");
 const {JWT_SECRET} = require('../config/config');
 
-const userSockets = new Map();
+const userSockets = new Map(); // userId -> Set of sockets
+const userStatus = new Map(); // userId -> { status: 'online'|'offline', lastSeen: timestamp }
 
 const handleGetMessages = require("./handlers/handleGetMessages");
 const handleNewMessages = require("./handlers/handleNewMessage");
@@ -24,6 +25,31 @@ function emitToUser(io, userId, event, data) {
   for (const socket of sockets) {
     socket.emit(event, data);
   }
+}
+
+function updateUserStatus(io, userId, status) {
+  userStatus.set(userId, {
+    status,
+    lastSeen: new Date().toISOString()
+  });
+  
+  // Powiadom znajomych o zmianie statusu
+  // TODO: Pobierz listę znajomych z bazy danych i powiadom ich
+  broadcastStatusToFriends(io, userId, status);
+}
+
+function broadcastStatusToFriends(io, userId, status) {
+  // Emit status update to all connected sockets (simplified)
+  // In production, you'd query the database for user's friends
+  io.emit("user_status_changed", { 
+    userId, 
+    status, 
+    lastSeen: userStatus.get(userId)?.lastSeen 
+  });
+}
+
+function getUserStatus(userId) {
+  return userStatus.get(userId) || { status: 'offline', lastSeen: null };
 }
 
 function registerSocketHandlers(io, db) {
@@ -62,6 +88,10 @@ function registerSocketHandlers(io, db) {
   // Obsługa zdarzeń po nawiązaniu połączenia
   io.on("connection", (socket) => {
     socket.join(`user:${socket.user_id}`);
+    
+    // Ustaw status online przy połączeniu
+    updateUserStatus(io, socket.user_id, 'online');
+    console.log(`👤 User ${socket.username} (${socket.user_id}) is now online`);
 
     // Obsługa rozłączenia i usuwanie socketów z mapy
     socket.on("disconnect", () => {
@@ -71,6 +101,9 @@ function registerSocketHandlers(io, db) {
         userSet.delete(socket);
         if (userSet.size === 0) {
           userSockets.delete(userId);
+          // Ustaw status offline gdy ostatni socket się rozłączy
+          updateUserStatus(io, userId, 'offline');
+          console.log(`👤 User ${socket.username} (${userId}) is now offline`);
         }
       }
     });
@@ -79,6 +112,20 @@ function registerSocketHandlers(io, db) {
     handleGetMessages(io, socket, db);
     handleNewMessages(io, socket, db, userSockets, getSocketIdsForUser);
     handleMarkMessagesRead(io, socket, db);
+    
+    // Obsługa statusu użytkownika
+    socket.on("get_user_status", ({ userId }, callback) => {
+      const status = getUserStatus(userId);
+      if (callback) callback(status);
+    });
+    
+    socket.on("get_friends_status", ({ friendIds }, callback) => {
+      const friendsStatus = friendIds.map(id => ({
+        userId: id,
+        ...getUserStatus(id)
+      }));
+      if (callback) callback(friendsStatus);
+    });
   });
 };
 
@@ -86,5 +133,7 @@ module.exports = {
   registerSocketHandlers,
   getSocketIdsForUser,
   emitToUser,
-  userSockets
+  userSockets,
+  getUserStatus,
+  updateUserStatus
 };

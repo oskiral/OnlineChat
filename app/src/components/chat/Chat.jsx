@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useSocket } from "../../contexts/SocketProvider";
+import StatusIndicator from "../ui/StatusIndicator";
 import resizeImage from "../../utils/resizeImage";
 import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 import "../../styles/Chat.css";
@@ -10,9 +11,10 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
   const [messages, setMessages] = useState([]);
   const [messagesRead, setMessagesRead] = useState(false);
   const messagesEndRef = useRef(null);
-  const socket = useSocket();
   const [inputValue, setInputValue] = useState("");
   const inputFileRef = useRef(null);
+
+  const { socket } = useSocket();
 
   const [readBy, setReadBy] = useState(new Set());
 
@@ -286,10 +288,13 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
     <div className="chat-window">
       <div className="chat-header">
         <div className="chat-user-info">
-          <img src={selectedChat.user.avatar || "../media/default.jpg"} className="chat-avatar" />
+          <div className="chat-avatar">
+            <img src={selectedChat.user.avatar || "../media/default.jpg"} />
+            <StatusIndicator userId={selectedChat.user.user_id} size="small" />
+          </div>
           <div className="more-info">
             <div className="chat-username">{selectedChat.user.username}</div>
-            <div className="chat-status">Online</div>
+            <StatusIndicator userId={selectedChat.user.user_id} showText={true} size="medium" />
           </div>
         </div>
         <div className="chat-header-menu">

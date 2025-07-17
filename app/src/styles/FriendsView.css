@@ -1,7 +1,20 @@
 .friends-view {
-  width: 23%;
-  padding: 1rem 2rem;
-  color: white;
+  width: 75%;
+  padding: 2rem;
+  color: var(--text-primary);
+  background-color: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.friends-view h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2a2a3d;
 }
 
 .search-input {
@@ -21,44 +34,66 @@
 }
 
 .friend-card {
-  background-color: #1e1f2c;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
+  background-color: var(--bg-sidebar);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #2a2a3d;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.friend-card:hover {
+  background-color: rgba(46, 137, 255, 0.1);
+  border-color: rgba(46, 137, 255, 0.3);
 }
 
 .avatar-friend-card {
-  width: 50px;
-  height: 50px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   object-fit: cover;
   margin-right: 1rem;
+  flex-shrink: 0;
 }
 
 .username {
   flex: 1;
-  margin-left: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 .actions button {
   margin-left: 0.5rem;
-  padding: 0.4rem 0.75rem;
+  padding: 0.5rem 1rem;
   border: none;
-  border-radius: 0.5rem;
-  font-weight: bold;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.85rem;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .accept {
-  background-color: #3b82f6;
+  background-color: var(--accent-blue);
   color: white;
 }
 
+.accept:hover {
+  background-color: #1E6FE6;
+}
+
 .decline {
-  background-color: #2e2e3f;
+  background-color: var(--bg-main);
+  color: var(--text-secondary);
+  border: 1px solid #2a2a3d;
+}
+
+.decline:hover {
+  background-color: #f56565;
   color: white;
+  border-color: #f56565;
 }
 
 .menu-icon {
@@ -105,4 +140,27 @@
   border-radius: 50%;
   object-fit: cover;
   margin-right: 1rem;
+}
+
+.friend-requests {
+  margin-top: 2rem;
+}
+
+.friend-requests h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.friend-requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.friend-search {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }

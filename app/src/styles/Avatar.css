@@ -13,6 +13,12 @@
     object-fit: cover;
     margin-inline: auto;
     margin-bottom: 20px;
+    pointer-events: none;
+}
+
+img {
+    pointer-events: none;
+    user-select: none;
 }
 
 .avatar-upload {

@@ -47,5 +47,9 @@ export const SOCKET_EVENTS = {
   MESSAGE_READ_BY: 'messageReadBy',
   FRIEND_ADDED: 'friend-added',
   FORCE_LOGOUT: 'forceLogout',
+  // Status events
+  USER_STATUS_CHANGED: 'user_status_changed',
+  GET_USER_STATUS: 'get_user_status',
+  GET_FRIENDS_STATUS: 'get_friends_status',
 };
 

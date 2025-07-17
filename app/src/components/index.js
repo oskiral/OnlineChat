@@ -9,6 +9,7 @@ export { default as SettingsBlock } from './settings/SettingsBlock';
 export { default as UserSettings } from './settings/UserSettings';
 export { default as Avatar } from './ui/Avatar';
 export { default as UserPanel } from './ui/UserPanel';
+export { default as StatusIndicator } from './ui/StatusIndicator';
 export { default as FriendCard } from './friends/FriendCard';
 export { default as FriendRequests } from './friends/FriendRequests';
 export { default as FriendRequestCard } from './friends/FriendRequestCard';

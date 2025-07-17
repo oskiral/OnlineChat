@@ -1,8 +1,10 @@
+import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
+
 export default function FriendRequestCard({ user, token, onResponse }) {
 
     async function handleAccept() {
         try {
-        const res = await fetch("`${API_BASE_URL}`/api/friends/friendRequests/accept", {
+        const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.FRIENDS.ACCEPT_REQUEST}`, {
             method: "POST",
             headers: {
             "Content-Type": "application/json",
@@ -12,7 +14,7 @@ export default function FriendRequestCard({ user, token, onResponse }) {
         });
 
         if (res.ok) {
-            onResponse(user.sender_id);
+            onResponse(user.sender_id, true); // true means accepted
         } else {
             console.error("Accept failed");
         }
@@ -23,7 +25,7 @@ export default function FriendRequestCard({ user, token, onResponse }) {
 
     async function handleDecline() {
         try {
-        const res = await fetch("`${API_BASE_URL}`/api/friends/friendRequests/decline", {
+        const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.FRIENDS.DECLINE_REQUEST}`, {
             method: "POST",
             headers: {
             "Content-Type": "application/json",
@@ -33,7 +35,7 @@ export default function FriendRequestCard({ user, token, onResponse }) {
         });
 
         if (res.ok) {
-            onResponse(user.sender_id); // usuń z listy
+            onResponse(user.sender_id, false); // false means declined
         } else {
             console.error("Decline failed");
         }

@@ -1,15 +1,18 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
-import { API_BASE_URL, API_ENDPOINTS } from "../constants";
+import { API_BASE_URL, API_ENDPOINTS, SOCKET_EVENTS } from "../constants";
 
 export const SocketContext = createContext({
   socket: null,
   friends: [],
   setFriends: () => {},
+  userStatus: new Map(), // userId -> { status, lastSeen }
+  setUserStatus: () => {},
 });
 
 export function SocketProvider({ token, children, setUser, setFriends }) {
   const [socket, setSocket] = useState(null);
+  const [userStatus, setUserStatus] = useState(new Map());
 
   useEffect(() => {
     if (!token) {
@@ -63,6 +66,16 @@ export function SocketProvider({ token, children, setUser, setFriends }) {
       newSocket.disconnect();
     });
 
+    // Obsługa statusu użytkowników
+    newSocket.on(SOCKET_EVENTS.USER_STATUS_CHANGED, ({ userId, status, lastSeen }) => {
+      console.log(`📊 User ${userId} status changed to ${status}`);
+      setUserStatus(prev => {
+        const newStatus = new Map(prev);
+        newStatus.set(userId, { status, lastSeen });
+        return newStatus;
+      });
+    });
+
     setSocket(newSocket);
 
     return () => {
@@ -72,12 +85,16 @@ export function SocketProvider({ token, children, setUser, setFriends }) {
   }, [token]);
 
   return (
-    <SocketContext.Provider value={socket}>
+    <SocketContext.Provider value={{ socket, userStatus, setUserStatus }}>
       {children}
     </SocketContext.Provider>
   );
 }
 
 export function useSocket() {
-  return useContext(SocketContext);
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error('useSocket must be used within SocketProvider');
+  }
+  return context;
 }

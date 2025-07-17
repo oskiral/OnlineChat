@@ -1,4 +1,5 @@
 import "../../styles/UserPanel.css";
+import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 import Avatar from "./Avatar";
 import { useSocket } from "../../contexts/SocketProvider";
 
@@ -6,7 +7,7 @@ export default function UserPanel({ user, setUser, onLogout, token}) {
     
 
     function unUploadAvatar() {
-        fetch("`${API_BASE_URL}`/unUploadAvatar", {
+        fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.UN_UPLOAD_AVATAR}`, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`
@@ -22,14 +23,14 @@ export default function UserPanel({ user, setUser, onLogout, token}) {
         });
     }
 
-    const socket = useSocket();
+    const { socket } = useSocket();
     function handleLogout() {
         if (!socket?.id) {
         alert("Socket not ready");
         return;
         }
 
-        fetch("`${API_BASE_URL}`/logout", {
+        fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LEGACY_LOGOUT}`, {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`,

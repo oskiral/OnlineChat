@@ -1,4 +1,5 @@
 import resizeImage from "../../utils/resizeImage";
+import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 import "../../styles/Avatar.css";
 import { useRef } from "react";
 
@@ -10,7 +11,7 @@ export default function Avatar({ user, onUpload, token}) {
     onUpload(null);
 
     // Wyślij request do backendu, by zresetować avatar w DB
-    const res = await fetch("`${API_BASE_URL}`/api/user/removeAvatar", {
+    const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.REMOVE_AVATAR}`, {
         method: "POST",
         headers: {
         "Content-Type": "application/json",
@@ -45,7 +46,7 @@ export default function Avatar({ user, onUpload, token}) {
         const formData = new FormData();
         formData.append("avatar", file);
 
-        const res = await fetch("`${API_BASE_URL}`/api/user/uploadAvatar", {
+        const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.UPLOAD_AVATAR}`, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`

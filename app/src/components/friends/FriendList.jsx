@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useSocket } from "../../contexts/SocketProvider";
+import { useUserStatus } from "../../hooks/useUserStatus";
+import StatusIndicator from "../ui/StatusIndicator";
 import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 
 export default function FriendList({ user, token, onSelectedChat, selectedChat }) {
-  const socket = useSocket();
+  const { socket } = useSocket();
+  const { getFriendsStatus } = useUserStatus();
   const [friends, setFriends] = useState([]);
   const [error, setError] = useState("");
   const [unreadCounts, setUnreadCounts] = useState({});
@@ -16,6 +19,12 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
       if (!res.ok) throw new Error("Failed to fetch friends");
       const data = await res.json();
       setFriends(data);
+      
+      // Pobierz statusy znajomych
+      if (data.length > 0) {
+        const friendIds = data.map(friend => friend.user_id);
+        getFriendsStatus(friendIds);
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -172,9 +181,13 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
           >
             <div className="chat-avatar">
               <img src={f.avatar || "/media/default.jpg"} alt={f.username} />
+              <StatusIndicator userId={f.user_id} size="small" />
             </div>
             <div className="chat-info">
-              <strong>{f.username}</strong>
+              <div className="chat-header">
+                <strong>{f.username}</strong>
+                <StatusIndicator userId={f.user_id} showText={true} size="small" />
+              </div>
               <p className="last-message">
                 {f.last_message
                   ? f.last_message

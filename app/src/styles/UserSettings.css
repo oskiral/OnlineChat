@@ -1,50 +1,72 @@
 .settings-container-form {
-  max-width: 400px;
-  margin: 50px auto;
-  padding: 20px;
-  background-color: #1F2436;
-  border-radius: 8px;
-  color: #fff;
-  font-family: sans-serif;
+  max-width: 500px;
+  margin: 0;
+  padding: 2rem;
+  background-color: var(--bg-sidebar);
+  border: 1px solid #2a2a3d;
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: 'Poppins', sans-serif;
 }
 
 .settings-container h2 {
-  text-align: center;
-  margin-bottom: 20px;
+  text-align: left;
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .settings-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 
 
 .settings-form label {
-  font-size: 14px;
-  color: #ccc;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
 }
 
 .settings-form input[type="text"],
 .settings-form input[type="password"],
 .settings-form input[type="file"] {
-  padding: 10px;
-  border: none;
-  border-radius: 4px;
-  background-color: #181C2F;
-  color: #fff;
+  padding: 0.75rem 1rem;
+  border: 1px solid #2a2a3d;
+  border-radius: 8px;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.settings-form input[type="text"]:focus,
+.settings-form input[type="password"]:focus {
+  border-color: var(--accent-blue);
+  background-color: rgba(46, 137, 255, 0.1);
+  outline: none;
 }
 
 .settings-form button {
-  padding: 10px;
+  padding: 0.75rem 1.5rem;
   border: none;
-  background-color: #2e89ff;
+  background-color: var(--accent-blue);
   color: white;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.settings-form button:hover {
+  background-color: #1E6FE6;
+  transform: translateY(-1px);
 }
 
 .settings-form button:hover {
