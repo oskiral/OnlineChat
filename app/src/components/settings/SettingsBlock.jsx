@@ -1,6 +1,7 @@
 import "../../styles/Settings.css"
 import { LogOut } from "lucide-react";
 import { useSocket } from "../../contexts/SocketProvider";
+import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 import UserSettings from "./UserSettings";
 
 export default function SettingsBlock({onLogout, user}) {
@@ -13,7 +14,7 @@ export default function SettingsBlock({onLogout, user}) {
             return;
         }
 
-        fetch("http://localhost:3001/api/auth/logout", {
+        fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGOUT}`, {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`,

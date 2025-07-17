@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 import "../../styles/Login.css";
 
 export default function Login({ onLogin }) {
@@ -22,9 +23,9 @@ export default function Login({ onLogin }) {
       return;
     }
 
-    const endpoint = isRegistering ? "/api/auth/register" : "/api/auth/login";
+    const endpoint = isRegistering ? API_ENDPOINTS.AUTH.REGISTER : API_ENDPOINTS.AUTH.LOGIN;
     try {
-      const res = await fetch(`http://localhost:3001${endpoint}`, {
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: username.trim(), password }),

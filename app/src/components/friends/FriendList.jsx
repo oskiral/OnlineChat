@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSocket } from "../../contexts/SocketProvider";
+import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 
 export default function FriendList({ user, token, onSelectedChat, selectedChat }) {
   const socket = useSocket();
@@ -9,7 +10,7 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
 
   async function fetchFriendsWithMessages() {
     try {
-      const res = await fetch("http://localhost:3001/api/friends/getFriendsWithLastMessage", {
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.FRIENDS.GET_FRIENDS_WITH_MESSAGES}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch friends");
@@ -22,7 +23,7 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
 
   async function fetchUnreadCounts() {
     try {
-      const res = await fetch("http://localhost:3001/api/messages/unread-counts", {
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.MESSAGES.UNREAD_COUNTS}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch unread counts");
@@ -107,7 +108,7 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
 
   async function handleFriendClick(friend) {
     try {
-      const res = await fetch("http://localhost:3001/api/rooms", {
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.ROOMS}`, {
         method: "POST",
         headers:
         {

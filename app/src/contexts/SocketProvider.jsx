@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { API_BASE_URL, API_ENDPOINTS } from "../constants";
 
 export const SocketContext = createContext({
   socket: null,
@@ -20,7 +21,7 @@ export function SocketProvider({ token, children, setUser, setFriends }) {
       return;
     }
 
-    const newSocket = io("http://localhost:3001", {
+    const newSocket = io(API_BASE_URL, {
       auth: { token },
       autoConnect: true,
     });
@@ -37,7 +38,7 @@ export function SocketProvider({ token, children, setUser, setFriends }) {
       console.log("📬 friend-added received:", friendId);
 
       try {
-        const res = await fetch(`http://localhost:3001/users/${friendId}`, {
+        const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.GET_USER(friendId)}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

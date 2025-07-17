@@ -2,7 +2,7 @@ export default function FriendRequestCard({ user, token, onResponse }) {
 
     async function handleAccept() {
         try {
-        const res = await fetch("http://localhost:3001/api/friends/friendRequests/accept", {
+        const res = await fetch("`${API_BASE_URL}`/api/friends/friendRequests/accept", {
             method: "POST",
             headers: {
             "Content-Type": "application/json",
@@ -23,7 +23,7 @@ export default function FriendRequestCard({ user, token, onResponse }) {
 
     async function handleDecline() {
         try {
-        const res = await fetch("http://localhost:3001/api/friends/friendRequests/decline", {
+        const res = await fetch("`${API_BASE_URL}`/api/friends/friendRequests/decline", {
             method: "POST",
             headers: {
             "Content-Type": "application/json",

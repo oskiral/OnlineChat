@@ -7,11 +7,18 @@ export const API_ENDPOINTS = {
     LOGIN: '/api/auth/login',
     REGISTER: '/api/auth/register',
     LOGOUT: '/api/auth/logout',
+    // Legacy
+    LEGACY_LOGOUT: '/logout',
   },
   USER: {
     ME: '/api/user/me',
     SEARCH: '/api/user/search',
     BY_ID: (id) => `/api/user/${id}`,
+    UPLOAD_AVATAR: '/api/user/uploadAvatar',
+    REMOVE_AVATAR: '/api/user/removeAvatar',
+    // Legacy endpoints
+    UN_UPLOAD_AVATAR: '/unUploadAvatar',
+    GET_USER: (id) => `/users/${id}`,
   },
   FRIENDS: {
     GET_FRIENDS: '/api/friends/getFriends',
@@ -24,7 +31,7 @@ export const API_ENDPOINTS = {
   ROOMS: '/api/rooms',
   MESSAGES: {
     UNREAD_COUNTS: '/api/messages/unread-counts',
-    UPLOAD: '/api/upload',
+    UPLOAD: '/api/messages/upload',
   },
 };
 

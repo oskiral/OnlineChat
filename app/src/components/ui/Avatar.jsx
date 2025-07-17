@@ -10,7 +10,7 @@ export default function Avatar({ user, onUpload, token}) {
     onUpload(null);
 
     // Wyślij request do backendu, by zresetować avatar w DB
-    const res = await fetch("http://localhost:3001/api/user/removeAvatar", {
+    const res = await fetch("`${API_BASE_URL}`/api/user/removeAvatar", {
         method: "POST",
         headers: {
         "Content-Type": "application/json",
@@ -45,7 +45,7 @@ export default function Avatar({ user, onUpload, token}) {
         const formData = new FormData();
         formData.append("avatar", file);
 
-        const res = await fetch("http://localhost:3001/api/user/uploadAvatar", {
+        const res = await fetch("`${API_BASE_URL}`/api/user/uploadAvatar", {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`

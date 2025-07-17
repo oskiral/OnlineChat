@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useSocket } from "../../contexts/SocketProvider";
 import resizeImage from "../../utils/resizeImage";
+import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 import "../../styles/Chat.css";
 
 export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
@@ -208,7 +209,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
         const formData = new FormData();
         formData.append("file", selectedFile);
 
-        const response = await fetch("http://localhost:3001/api/messages/upload", {
+        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.MESSAGES.UPLOAD}`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -218,7 +219,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
 
         if (!response.ok) throw new Error("Upload failed");
         const data = await response.json();
-        fileUrl = `http://localhost:3001${data.fileUrl}`;
+        fileUrl = `${API_BASE_URL}${data.fileUrl}`;
       } catch (err) {
         alert("File upload failed.");
         return;

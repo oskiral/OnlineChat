@@ -6,7 +6,7 @@ export default function UserPanel({ user, setUser, onLogout, token}) {
     
 
     function unUploadAvatar() {
-        fetch("http://localhost:3001/unUploadAvatar", {
+        fetch("`${API_BASE_URL}`/unUploadAvatar", {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`
@@ -29,7 +29,7 @@ export default function UserPanel({ user, setUser, onLogout, token}) {
         return;
         }
 
-        fetch("http://localhost:3001/logout", {
+        fetch("`${API_BASE_URL}`/logout", {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`,
