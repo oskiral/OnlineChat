@@ -7,10 +7,10 @@ export default function Avatar({ user, onUpload, token}) {
     const fileInputRef = useRef(null);
     
     async function unUploadAvatar() {
-    // Ustaw awatar na defaultowy lokalnie
+    // Set avatar to default locally
     onUpload(null);
 
-    // Wyślij request do backendu, by zresetować avatar w DB
+   // send request to backend to reset avatar in DB
     const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.REMOVE_AVATAR}`, {
         method: "POST",
         headers: {
@@ -25,6 +25,7 @@ export default function Avatar({ user, onUpload, token}) {
     }
 
     async function handleAvatarChange(event) {
+        console.log("File input changed", event.target.files);
         let file = event.target.files[0];
         if (!file) return;
 
@@ -62,18 +63,27 @@ export default function Avatar({ user, onUpload, token}) {
         }
     }
 
-    function triggerFileInput() {
-        fileInputRef.current.click();
+    function triggerFileInput(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("Avatar clicked - triggering file input");
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
     }
 
     return (
         <div className="avatar-component">
             <img
-                src={user.avatar || "../media/default.jpg"}
+                src={user.avatar || "/media/default.jpg"}
                 alt="User Avatar"
                 className="avatar"
                 onClick={triggerFileInput}
-                style={{ cursor: "pointer" }}
+                style={{ 
+                    cursor: "pointer",
+                    pointerEvents: "auto",
+                    userSelect: "none"
+                }}
                 title="Click to change avatar"
             />
             <input

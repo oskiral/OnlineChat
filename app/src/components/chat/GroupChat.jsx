@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useSocket } from "../../contexts/SocketProvider";
 import resizeImage from "../../utils/resizeImage";
-import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
+import { API_BASE_URL, API_ENDPOINTS, MESSAGE_LIMITS, FILE_LIMITS } from "../../constants";
 import "../../styles/Chat.css";
 
 export default function GroupChat({ selectedChat, user, token }) {
@@ -151,6 +151,18 @@ export default function GroupChat({ selectedChat, user, token }) {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Check file size
+    if (file.size > FILE_LIMITS.MAX_SIZE) {
+      alert(`File is too large! Maximum size is ${FILE_LIMITS.MAX_SIZE / (1024 * 1024)}MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+      return;
+    }
+
+    // Check file type
+    if (!FILE_LIMITS.ALLOWED_TYPES.includes(file.type)) {
+      alert(`File type not allowed! Allowed types: ${FILE_LIMITS.ALLOWED_TYPES.join(', ')}`);
+      return;
+    }
+
     if (file.type.startsWith("image/")) {
       try {
         const resized = await resizeImage(file, { maxWidth: 200 });
@@ -175,6 +187,13 @@ export default function GroupChat({ selectedChat, user, token }) {
 
     const content = inputValue.trim();
     if (!content && !selectedFile) return;
+    
+    // Check message length limit
+    if (content.length > MESSAGE_LIMITS.MAX_LENGTH) {
+      alert(`Message is too long! Maximum ${MESSAGE_LIMITS.MAX_LENGTH} characters allowed. Your message has ${content.length} characters.`);
+      return;
+    }
+    
     document.querySelector('.file-upload-btn').classList.remove('active');
 
     let fileUrl = null;
@@ -305,13 +324,21 @@ export default function GroupChat({ selectedChat, user, token }) {
       </div>
 
       <div className="chat-input">
-        <input
-          className="chat-text-input"
-          placeholder="Type a message..."
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
+        <div className="chat-input-container">
+          <input
+            className="chat-text-input"
+            placeholder="Type a message..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            maxLength={MESSAGE_LIMITS.MAX_LENGTH}
+          />
+          <div className="character-counter">
+            <span className={inputValue.length > MESSAGE_LIMITS.WARNING_THRESHOLD ? 'warning' : ''}>
+              {inputValue.length}/{MESSAGE_LIMITS.MAX_LENGTH}
+            </span>
+          </div>
+        </div>
         <div className="file-input-wrapper">
           <input onChange={handleFileChange} accept="image/*,application/pdf" type="file" className="file-upload-input" ref={inputFileRef} />
           <div className="file-upload-btn" onClick={clickFileInput}><img src="../media/image-down.svg" alt="Upload" /></div>

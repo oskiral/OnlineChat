@@ -1,6 +1,17 @@
 // API Configuration
 export const API_BASE_URL = 'http://localhost:3001';
 
+// App Configuration
+export const MESSAGE_LIMITS = {
+  MAX_LENGTH: 1000,
+  WARNING_THRESHOLD: 900
+};
+
+export const FILE_LIMITS = {
+  MAX_SIZE: 10 * 1024 * 1024, // 10MB
+  ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+};
+
 // API Endpoints
 export const API_ENDPOINTS = {
   AUTH: {
@@ -16,6 +27,8 @@ export const API_ENDPOINTS = {
     BY_ID: (id) => `/api/user/${id}`,
     UPLOAD_AVATAR: '/api/user/uploadAvatar',
     REMOVE_AVATAR: '/api/user/removeAvatar',
+    UPDATE_USERNAME: '/api/user/changeUsername',
+    CHANGE_PASSWORD: '/api/user/changePassword',
     // Legacy endpoints
     UN_UPLOAD_AVATAR: '/unUploadAvatar',
     GET_USER: (id) => `/users/${id}`,

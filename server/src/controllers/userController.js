@@ -4,15 +4,19 @@ const db = require("../config/database");
 const fs = require('fs');
 
 exports.uploadAvatar = async (req, res) => {
-    
+    console.log("Upload avatar request received");
+    console.log("File:", req.file);
+    console.log("User:", req.user);
   
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   if (!req.user || !req.user.username) return res.status(401).json({ error: 'Invalid token payload' });
   
   // Construct the file URL based on the environment variable or default to localhost
-  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT}`;
-  const fileUrl = `${baseUrl}/src//uploads/avatars/${req.file.filename}`;
+  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+  const fileUrl = `${baseUrl}/uploads/avatars/${req.file.filename}`;
   const username = req.user.username;
+  
+  console.log("Generated file URL:", fileUrl);
   
 
 
@@ -30,27 +34,24 @@ exports.uploadAvatar = async (req, res) => {
       if (row && row.avatar) {
         const oldAvatarUrl = row.avatar;
 
-        // Extract the relative path from the old avatar URL
-        let relativeAvatarPath = null;
+        // Extract the filename from the old avatar URL
+        let filename = null;
         try {
           const urlObj = new URL(oldAvatarUrl);
-          relativeAvatarPath = urlObj.pathname.startsWith('/')
-            ? urlObj.pathname.slice(1)
-            : urlObj.pathname;
+          filename = path.basename(urlObj.pathname);
         } catch {
-          
-          // if the old avatar URL is not a full URL, assume it's a relative path
-          relativeAvatarPath = oldAvatarUrl.startsWith('/')
-            ? oldAvatarUrl.slice(1)
-            : oldAvatarUrl;
+          // if the old avatar URL is not a full URL, assume it's just a filename
+          filename = path.basename(oldAvatarUrl);
         }
 
-        const oldAvatarFullPath = path.join(__dirname, "..", "..", relativeAvatarPath);
-        fs.unlink(oldAvatarFullPath, (err) => {
-          if (err) {
-            console.warn('Old avatar not deleted:', err.message);
-          }
-        });
+        if (filename && filename !== 'default.jpg') {
+          const oldAvatarFullPath = path.join(__dirname, "..", "..", "uploads", "avatars", filename);
+          fs.unlink(oldAvatarFullPath, (err) => {
+            if (err) {
+              console.warn('Old avatar not deleted:', err.message);
+            }
+          });
+        }
       }
 
 
@@ -78,17 +79,24 @@ exports.removeAvatar = async (req, res) => {
       if (err) return res.status(500).json({ error: 'Database error' });
 
       if (row && row.avatar) {
-        const avatarPath = row.avatar.startsWith('http')
-          ? new URL(row.avatar).pathname
-          : row.avatar;
-        const fullPath = path.join(__dirname, "..", "..", avatarPath.startsWith('/') ? avatarPath.slice(1) : avatarPath);
+        // Extract filename from avatar URL
+        let filename = null;
+        try {
+          const urlObj = new URL(row.avatar);
+          filename = path.basename(urlObj.pathname);
+        } catch {
+          filename = path.basename(row.avatar);
+        }
 
-        fs.unlink(fullPath, (err) => {
-          if (err) console.warn("Failed to delete avatar file:", err.message);
-        });
+        if (filename && filename !== 'default.jpg') {
+          const fullPath = path.join(__dirname, "..", "..", "uploads", "avatars", filename);
+          fs.unlink(fullPath, (err) => {
+            if (err) console.warn("Failed to delete avatar file:", err.message);
+          });
+        }
       }
 
-      // Zresetuj avatar w DB na null lub ścieżkę do defaultowego
+      // Zresetuj avatar w DB na null
       db.run("UPDATE users SET avatar = NULL WHERE username = ?", [username], (err) => {
         if (err) return res.status(500).json({ error: 'Could not reset avatar' });
 
@@ -150,5 +158,39 @@ exports.userById = async (req, res) => {
   });
 };
 
-// exports.changeUsername = async (req, res) => {}
-// exports.changePassword = async (req, res) => {}
+exports.changeUsername = async (req, res) => {
+  const { username } = req.body;
+  const currentUsername = req.user.username;
+
+  if (!username || username === currentUsername) {
+    return res.status(400).json({ error: "Invalid username" });
+  }
+
+  db.run("UPDATE users SET username = ? WHERE username = ?", [username, currentUsername], function(err) {
+    if (err) {
+      console.error("Error changing username:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    res.json({ message: "Username changed successfully" });
+  });
+};
+
+exports.changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const username = req.user.username;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: "Both fields are required" });
+  }
+
+  // Here you would verify the current password and update to the new password
+  db.run("UPDATE users SET password = ? WHERE username = ?", [newPassword, username], function(err) {
+    if (err) {
+      console.error("Error changing password:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    res.json({ message: "Password changed successfully" });
+  });
+};

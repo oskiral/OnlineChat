@@ -4,7 +4,7 @@ import { useSocket } from "../../contexts/SocketProvider";
 import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 import UserSettings from "./UserSettings";
 
-export default function SettingsBlock({onLogout, user}) {
+export default function SettingsBlock({onLogout, user, setUser}) {
     const token = user.token;
     const { socket } = useSocket();
 
@@ -33,7 +33,7 @@ export default function SettingsBlock({onLogout, user}) {
 
     return (
         <div className="settings-container">
-            <UserSettings user={user}/>
+            <UserSettings user={user} setUser={setUser}/>
             <div className="logout-btn" onClick={handleLogout}><LogOut size={18} />LOG OUT</div>
         </div>
     )

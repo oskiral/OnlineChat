@@ -6,18 +6,24 @@
     gap: 10px
 }
 
-.avatar {
+.avatar-component .avatar {
     border-radius: 50%;
     width: 100px;
     height: 100px;
     object-fit: cover;
     margin-inline: auto;
     margin-bottom: 20px;
-    pointer-events: none;
+    cursor: pointer !important;
+    transition: opacity 0.2s ease;
+    pointer-events: auto !important;
 }
 
-img {
-    pointer-events: none;
+.avatar-component .avatar:hover {
+    opacity: 0.8;
+}
+
+.avatar-component img {
+    pointer-events: auto;
     user-select: none;
 }
 

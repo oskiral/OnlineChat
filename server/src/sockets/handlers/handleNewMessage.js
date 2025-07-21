@@ -1,7 +1,17 @@
+// Message limits configuration
+const MESSAGE_LIMITS = {
+  MAX_LENGTH: 1000
+};
+
 module.exports = (io, socket, db, userSockets, getSocketIdsForUser) => {
   socket.on("newMessage", ({ chatId, content, fileUrl }) => {
     if (!chatId || (!content && !fileUrl)) {
       return socket.emit("error", { msg: "chatId and content or file are required" });
+    }
+
+    // Check message length limit
+    if (content && content.length > MESSAGE_LIMITS.MAX_LENGTH) {
+      return socket.emit("error", { msg: `Message too long. Maximum ${MESSAGE_LIMITS.MAX_LENGTH} characters allowed.` });
     }
 
     const userId = socket.user_id;

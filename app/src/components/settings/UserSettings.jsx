@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import Avatar from "../ui/Avatar";
 import "../../styles/UserSettings.css";
+import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 
-export default function UserSettings({ user }) {
+export default function UserSettings({ user, setUser }) {
     const [username, setUsername] = useState(user?.username || "");
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -15,8 +16,31 @@ export default function UserSettings({ user }) {
             setMessage("Username cannot be empty.");
             return;
         }
-        // Here you would call your API to update the username
-        setMessage("Username updated successfully!");
+    
+        fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.UPDATE_USERNAME}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${user.token}`,
+            },
+            body: JSON.stringify({ username }),
+        })
+        .then((response) => {
+            if (response.ok) {
+                // Update username in global state
+                setUser(prevUser => ({
+                    ...prevUser,
+                    username: username
+                }));
+                setMessage("Username updated successfully!");
+            } else {
+                setMessage("Failed to update username.");
+            }
+        })
+        .catch((error) => {
+            console.error("Error updating username:", error);
+            setMessage("Error updating username.");
+        });
     };
 
     const handlePasswordChange = async (e) => {
@@ -25,14 +49,37 @@ export default function UserSettings({ user }) {
             setMessage("Please fill in both password fields.");
             return;
         }
-        // Here you would call your API to update the password
-        setMessage("Password updated successfully!");
+    
+        fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.CHANGE_PASSWORD}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${user.token}`,
+            },
+            body: JSON.stringify({ currentPassword, newPassword }),
+        })
+        .then((response) => {
+            if (response.ok) {
+                setMessage("Password updated successfully!");
+            } else {
+                setMessage("Failed to update password.");
+            }
+        })
+        .catch((error) => {
+            console.error("Error updating password:", error);
+            setMessage("Error updating password.");
+        });
+
         setCurrentPassword("");
         setNewPassword("");
     };
 
     const onAvatarUpload = (avatarUrl) => {
-        // Here you would handle avatar upload logic
+        // Update user's avatar in the global state
+        setUser(prevUser => ({
+            ...prevUser,
+            avatar: avatarUrl
+        }));
         setMessage("Avatar updated successfully!");
     };
 
@@ -51,10 +98,11 @@ export default function UserSettings({ user }) {
                 <button type="submit">Update Username</button>
             </form>
 
-            <form className="settings-form">
+            <div className="settings-form">
                 <label>Change Avatar</label>
+
                 <Avatar user={user} token={user.token} onUpload={onAvatarUpload}/>
-            </form>
+            </div>
 
             <form onSubmit={handlePasswordChange} className="settings-form">
                 <label>Change Password</label>
