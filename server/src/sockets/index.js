@@ -52,6 +52,10 @@ function getUserStatus(userId) {
   return userStatus.get(userId) || { status: 'offline', lastSeen: null };
 }
 
+function broadcastToGroup(io, groupId, event, data) {
+  io.to(`group:${groupId}`).emit(event, data);
+}
+
 function registerSocketHandlers(io, db) {
   // Autoryzacja socketów na podstawie tokenu JWT
   io.use((socket, next) => {
@@ -85,15 +89,15 @@ function registerSocketHandlers(io, db) {
     });
   });
 
-  // Obsługa zdarzeń po nawiązaniu połączenia
+  //handle user connection
   io.on("connection", (socket) => {
     socket.join(`user:${socket.user_id}`);
     
-    // Ustaw status online przy połączeniu
+
     updateUserStatus(io, socket.user_id, 'online');
     console.log(`👤 User ${socket.username} (${socket.user_id}) is now online`);
 
-    // Obsługa rozłączenia i usuwanie socketów z mapy
+    
     socket.on("disconnect", () => {
       const userId = socket.user_id;
       const userSet = userSockets.get(userId);
@@ -101,19 +105,19 @@ function registerSocketHandlers(io, db) {
         userSet.delete(socket);
         if (userSet.size === 0) {
           userSockets.delete(userId);
-          // Ustaw status offline gdy ostatni socket się rozłączy
+         
           updateUserStatus(io, userId, 'offline');
           console.log(`👤 User ${socket.username} (${userId}) is now offline`);
         }
       }
     });
 
-    // Rejestruj obsługę zdarzeń
+    // handlers for various events
     handleGetMessages(io, socket, db);
     handleNewMessages(io, socket, db, userSockets, getSocketIdsForUser);
     handleMarkMessagesRead(io, socket, db);
     
-    // Obsługa statusu użytkownika
+    // handlers for user status
     socket.on("get_user_status", ({ userId }, callback) => {
       const status = getUserStatus(userId);
       if (callback) callback(status);
@@ -126,6 +130,36 @@ function registerSocketHandlers(io, db) {
       }));
       if (callback) callback(friendsStatus);
     });
+
+    // Group chat handlers 
+    socket.on("join_group", ({ groupId }) => {
+      socket.join(`group:${groupId}`);
+      console.log(`👥 User ${socket.user_id} joined group ${groupId}`);
+    });
+
+    socket.on("leave_group", ({ groupId }) => {
+      socket.leave(`group:${groupId}`);
+      console.log(`👥 User ${socket.user_id} left group ${groupId}`);
+    });
+
+    socket.on("group_message", ({ groupId, message }) => {
+      if (!groupId || !message) {
+        return console.error("Invalid group message payload");
+      }
+
+      const userId = socket.user_id;
+      const groupMessage = {
+        groupId,
+        userId,
+        message,
+        sentAt: new Date().toISOString(),
+      };
+
+      // Emit the message to the group
+      broadcastToGroup(io, groupId, "group_message", groupMessage);
+
+      console.log(`📤 Group message from user ${userId} to group ${groupId}:`, message);
+    });
   });
 };
 
@@ -135,5 +169,6 @@ module.exports = {
   emitToUser,
   userSockets,
   getUserStatus,
-  updateUserStatus
+  updateUserStatus,
+  broadcastToGroup,
 };

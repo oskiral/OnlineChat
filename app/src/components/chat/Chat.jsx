@@ -4,6 +4,7 @@ import StatusIndicator from "../ui/StatusIndicator";
 import resizeImage from "../../utils/resizeImage";
 import { API_BASE_URL, API_ENDPOINTS } from "../../constants";
 import "../../styles/Chat.css";
+import GroupChat from "./GroupChat";
 
 export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
   const [fileName, setFileName] = useState("");
@@ -30,7 +31,8 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
       return;
     }
 
-    console.log("🎯 Chat useEffect triggered for:", selectedChat.user.username, "chatId:", selectedChat.room_id);
+    const chatName = selectedChat.isGroup ? selectedChat.name : selectedChat.user?.username;
+    console.log("🎯 Chat useEffect triggered for:", chatName, "chatId:", selectedChat.room_id);
 
     // Clear messages when switching chats
     setMessages([]);
@@ -228,14 +230,14 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
       }
     }
 
-    // Tworzymy tymczasowe ID wiadomości lokalnie (może timestamp lub UUID)
+    // Generate a temporary ID for optimistic update
     const tempId = `temp-${Date.now()}-${Math.random()}`;
     
     console.log("📤 Sending message with tempId:", tempId, "content:", content);
 
-    // Dodajemy lokalnie wiadomość do stanu - optimistic update
+    // Add local message to state - optimistic update
     const optimisticMessage = {
-      message_id: tempId,         // tymczasowe ID, zastąpi je backend po potwierdzeniu
+      message_id: tempId,         // temporary ID, will be replaced by backend after confirmation
       chat_id: selectedChat.room_id,
       sender_id: user.user_id,
       username: user.username,
@@ -249,7 +251,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
     
     setMessages(prev => [...prev, optimisticMessage]);
 
-    // Emitujemy wiadomość do serwera
+    // Emit the message to the server
     socket.emit("newMessage", {
       chatId: selectedChat.room_id,
       isGroup: selectedChat.type === "group",
@@ -278,6 +280,9 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
     </div>
     )
   }
+  if (selectedChat?.isGroup) {
+    return <GroupChat selectedChat={selectedChat} user={user} token={token} />;
+  }
   const lastMessage = messages[messages.length - 1];
   const lastMessageReadByOther =
     lastMessage &&
@@ -289,12 +294,21 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
       <div className="chat-header">
         <div className="chat-user-info">
           <div className="chat-avatar">
-            <img src={selectedChat.user.avatar || "../media/default.jpg"} />
-            <StatusIndicator userId={selectedChat.user.user_id} size="small" />
+            <img src={selectedChat.isGroup ? "/media/default.jpg" : (selectedChat.user?.avatar || "/media/default.jpg")} />
+            {!selectedChat.isGroup && selectedChat.user && (
+              <StatusIndicator userId={selectedChat.user.user_id} size="small" />
+            )}
           </div>
           <div className="more-info">
-            <div className="chat-username">{selectedChat.user.username}</div>
-            <StatusIndicator userId={selectedChat.user.user_id} showText={true} size="medium" />
+            <div className="chat-username">
+              {selectedChat.isGroup ? selectedChat.name : selectedChat.user?.username}
+            </div>
+            {!selectedChat.isGroup && selectedChat.user && (
+              <StatusIndicator userId={selectedChat.user.user_id} showText={true} size="medium" />
+            )}
+            {selectedChat.isGroup && (
+              <div className="group-info">Group Chat</div>
+            )}
           </div>
         </div>
         <div className="chat-header-menu">

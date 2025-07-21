@@ -67,3 +67,58 @@ exports.postRooms = async (req, res) => {
     res.status(500).json({ error: "Could not create room" });
   }
 };
+
+exports.createGroupRoom = async (req, res) => {
+  const { name, memberIds } = req.body;
+  const user = req.user;
+  const io = getIoInstance();
+
+  try {
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Group name is required" });
+    }
+
+    const roomId = await roomService.createRoom(name.trim(), user, true);
+    await roomService.addUserToRoom(user.user_id, roomId);
+
+    if (Array.isArray(memberIds) && memberIds.length > 0) {
+      for (const memberId of memberIds) {
+        await roomService.addUserToRoom(memberId, roomId);
+      }
+    }
+
+    const newRoom = { room_id: roomId, is_group: 1, name: name.trim() };
+    roomService.notifyUsersRoomCreated(io, [user.user_id, ...memberIds], newRoom);
+
+    return res.status(201).json(newRoom);
+  } catch (err) {
+    console.error("Error creating group room:", err);
+    res.status(500).json({ error: "Could not create group room" });
+  }
+};
+
+exports.addToGroupRoom = async (req, res) => {
+  const { roomId, memberId } = req.body;
+  const user = req.user;
+  const io = getIoInstance();
+
+  try {
+    // Check if the room exists and is a group room
+    const room = await roomService.isGroupRoom(roomId);
+    if (!room) {
+      return res.status(404).json({ error: "Room not found or not a group" });
+    }
+
+    // Add the new member to the group
+    await roomService.addUserToRoom(memberId, roomId);
+
+    // Notify all users in the room about the new member
+    io.to(roomId).emit("memberAdded", { memberId });
+
+    return res.status(200).json({ message: "Member added successfully" });
+  } catch (err) {
+    console.error("Error adding member to group:", err);
+    res.status(500).json({ error: "Could not add member to group" });
+  }
+};

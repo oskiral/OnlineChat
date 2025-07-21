@@ -1,5 +1,8 @@
 const db = require("../config/database");
 
+const {emitToUser} = require("../sockets/index");
+const { getIoInstance } = require("../utils/ioInstance.js");
+
 exports.getFriendsWithLastMessage = async (req, res) => {
   const userId = req.user.user_id;
 
@@ -199,11 +202,19 @@ exports.friendRequestSend = async (req, res) => {
     }
 
     // Jeśli nie ma żadnego zaproszenia, utwórz nowe
-    await db.run(
-      `INSERT INTO friend_requests (sender_id, receiver_id) VALUES (?, ?)`,
-      [senderId, recieverId]
-    );
+    await new Promise((resolve, reject) => {
+      const sql = `INSERT INTO friend_requests (sender_id, receiver_id) VALUES (?, ?)`;
+      db.run(sql, [senderId, recieverId], function(err) {
+        if (err) {
+          console.error("❌ Error creating friend request:", err);
+          return reject(err);
+        }
+        console.log("✅ Friend request created, ID:", this.lastID);
+        resolve(this.lastID);
+      });
+    });
 
+    console.log("✅ Friend request sent successfully");
     res.status(201).json({ success: true, message: "Friend request sent" });
   } catch (err) {
     console.error("Error sending friend request:", err);
@@ -212,51 +223,98 @@ exports.friendRequestSend = async (req, res) => {
 };
 
 exports.friendRequestAccept = async (req, res) => {
-  const recieverId = req.user.user_id;
-  const {senderId} = req.body;
+  const receiverId = req.user.user_id;
+  const { senderId } = req.body;
+
+  console.log("🤝 Friend request accept attempt:", { senderId, receiverId });
+
+  if (!senderId) {
+    return res.status(400).json({ error: 'Sender ID is required' });
+  }
 
   try {
-    const updated = await new Promise((resolve,reject) => {
-    const sql = `
-      UPDATE friend_requests 
-      SET status = 'accepted' 
-      WHERE sender_id = ? AND receiver_id = ? AND status = 'pending'
-    `;
-
-    db.run(sql, [senderId, recieverId], function(err) {
-      if (err) resolve(err);
-      resolve(this.changes);
+    // Check if they are already friends
+    const existingFriendship = await new Promise((resolve, reject) => {
+      const [user1, user2] = senderId < receiverId ? [senderId, receiverId] : [receiverId, senderId];
+      const sql = `SELECT * FROM friendships WHERE user1_id = ? AND user2_id = ?`;
+      db.get(sql, [user1, user2], (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
     });
+
+    if (existingFriendship) {
+      console.log("⚠️ Users are already friends");
+      return res.status(400).json({ error: 'Users are already friends' });
+    }
+
+    // Update the friend request status
+    const updated = await new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE friend_requests 
+        SET status = 'accepted' 
+        WHERE sender_id = ? AND receiver_id = ? AND status = 'pending'
+      `;
+
+      db.run(sql, [senderId, receiverId], function(err) {
+        if (err) {
+          console.error("❌ Error updating friend request:", err);
+          return reject(err);
+        }
+        console.log("✅ Friend request updated, changes:", this.changes);
+        resolve(this.changes);
+      });
     });
 
     if (updated === 0) {
+      console.log("⚠️ No pending friend request found");
       return res.status(400).json({ error: 'No pending friend request found' });
     }
 
-    const [user1, user2] = senderId < recieverId ? [senderId, recieverId] : [recieverId, senderId];
+    // Create friendship
+    const [user1, user2] = senderId < receiverId ? [senderId, receiverId] : [receiverId, senderId];
 
-    await new Promise((resolve,reject) => {
+    await new Promise((resolve, reject) => {
       const sql = `INSERT INTO friendships (user1_id, user2_id) VALUES (?, ?)`;
       db.run(sql, [user1, user2], function(err) {
-        if (err) return reject(err);
+        if (err) {
+          console.error("❌ Error creating friendship:", err);
+          return reject(err);
+        }
+        console.log("✅ Friendship created, ID:", this.lastID);
         resolve(this.lastID);
       });
     });
 
-    emitToUser(io, recieverId, 'friend-added', { friendId: senderId });
-    emitToUser(io, senderId, 'friend-added', { friendId: recieverId });
-    res.json({success: true, message:"Friend request accepted"});
+    // Emit socket events
+    const io = getIoInstance();
+    if (!io) {
+      console.error("❌ Socket.io instance not found");
+      return res.status(500).json({ error: "Socket.io instance not found" });
+    }
+
+    console.log("📡 Emitting friend-added events");
+    emitToUser(io, receiverId, 'friend-added', { friendId: senderId });
+    emitToUser(io, senderId, 'friend-added', { friendId: receiverId });
+    
+    console.log("✅ Friend request accepted successfully");
+    res.json({ success: true, message: "Friend request accepted" });
 
   } catch (err) {
-
-    console.error("Accept friend request error: ", err);
-    res.status(500).json({error: "Server error"});
+    console.error("❌ Accept friend request error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
 exports.friendRequestDecline = async (req, res) => {
   const receiverId = req.user.user_id;
-  const {senderId} = req.body;
+  const { senderId } = req.body;
+
+  console.log("❌ Friend request decline attempt:", { senderId, receiverId });
+
+  if (!senderId) {
+    return res.status(400).json({ error: 'Sender ID is required' });
+  }
 
   try {
     const updated = await new Promise((resolve, reject) => {
@@ -266,18 +324,24 @@ exports.friendRequestDecline = async (req, res) => {
         WHERE sender_id = ? AND receiver_id = ? AND status = 'pending'
       `;
       db.run(sql, [senderId, receiverId], function(err) {
-        if (err) return reject(err);
+        if (err) {
+          console.error("❌ Error declining friend request:", err);
+          return reject(err);
+        }
+        console.log("✅ Friend request declined, changes:", this.changes);
         resolve(this.changes);
       });
     });
 
     if (updated === 0) {
-      return res.status(400).json({error: "No pending friend request found"});
+      console.log("⚠️ No pending friend request found to decline");
+      return res.status(400).json({ error: "No pending friend request found" });
     }
 
-    res.json({success: true, message: "Friend request rejected"});
+    console.log("✅ Friend request declined successfully");
+    res.json({ success: true, message: "Friend request rejected" });
   } catch (err) {
-    console.error("Reject friend request error:", err);
-    res.status(500).json({error: "Server error"});
+    console.error("❌ Reject friend request error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 };

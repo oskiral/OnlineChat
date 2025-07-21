@@ -3,7 +3,7 @@ import FriendSearch from "./FriendSearch";
 import FriendList from "./FriendList";
 
 export default function FriendsPage({onSelectedChat, selectedChat}) {
-  const token = localStorage.getItem("token"); // lub inny sposób pobrania JWT
+  const token = localStorage.getItem("token");
   const [refreshList, setRefreshList] = useState(false);
 
   function handleFriendAdded() {

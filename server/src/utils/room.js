@@ -46,11 +46,11 @@ module.exports = function createRoomService(db) {
   /**
    * Tworzy nowy pokój i zwraca jego ID.
    */
-  async function createRoom(name, user) {
+  async function createRoom(name, user, isGroup) {
     return new Promise((resolve, reject) => {
     db.run(
-      "INSERT INTO rooms (room_name, created_by) VALUES (?, ?)",
-      [name, user.user_id],
+      "INSERT INTO rooms (room_name, created_by, is_group) VALUES (?, ?, ?)",
+      [name, user.user_id, isGroup],
       function (err) {
         if (err) return reject(err);
         resolve(this.lastID);   // <-- here you grab the new row’s ID
@@ -63,10 +63,28 @@ module.exports = function createRoomService(db) {
    * Dodaje użytkownika do pokoju.
    */
   async function addUserToRoom(userId, roomId) {
-    await run(
-      "INSERT INTO room_members (user_id, room_id) VALUES (?, ?)",
-      [userId, roomId]
-    );
+    try {
+      // Check if the user is already in the room
+      const existingMember = await get(
+        "SELECT * FROM room_members WHERE user_id = ? AND room_id = ?",
+        [userId, roomId]
+      );
+
+      if (existingMember) {
+        return { success: false, message: "User is already in the room" };
+      }
+
+      // Add the user to the room
+      await run(
+        "INSERT INTO room_members (user_id, room_id) VALUES (?, ?)",
+        [userId, roomId]
+      );
+
+      return { success: true, message: "User added to the room successfully" };
+    } catch (error) {
+      console.error("Error adding user to room:", error);
+      return { success: false, message: "Failed to add user to the room" };
+    }
   }
 
   async function getUserRoomsWithLastMessages(userId) {
@@ -77,11 +95,38 @@ module.exports = function createRoomService(db) {
         r.is_group,
         m.content AS last_message,
         m.sent_at AS last_message_date,
-        u.user_id AS other_user_id,
-        u.username AS other_username,
-        u.avatar AS other_avatar
+        CASE 
+          WHEN r.is_group = 1 THEN NULL 
+          ELSE (
+            SELECT u2.user_id 
+            FROM room_members rm2 
+            JOIN users u2 ON u2.user_id = rm2.user_id 
+            WHERE rm2.room_id = r.room_id AND rm2.user_id != ?
+            LIMIT 1
+          )
+        END AS other_user_id,
+        CASE 
+          WHEN r.is_group = 1 THEN NULL 
+          ELSE (
+            SELECT u2.username 
+            FROM room_members rm2 
+            JOIN users u2 ON u2.user_id = rm2.user_id 
+            WHERE rm2.room_id = r.room_id AND rm2.user_id != ?
+            LIMIT 1
+          )
+        END AS other_username,
+        CASE 
+          WHEN r.is_group = 1 THEN NULL 
+          ELSE (
+            SELECT u2.avatar 
+            FROM room_members rm2 
+            JOIN users u2 ON u2.user_id = rm2.user_id 
+            WHERE rm2.room_id = r.room_id AND rm2.user_id != ?
+            LIMIT 1
+          )
+        END AS other_avatar
       FROM rooms r
-      JOIN room_members rm ON rm.room_id = r.room_id
+      JOIN room_members rm ON rm.room_id = r.room_id AND rm.user_id = ?
       LEFT JOIN (
         SELECT m1.*
         FROM messages m1
@@ -91,13 +136,10 @@ module.exports = function createRoomService(db) {
           GROUP BY chat_id
         ) latest ON latest.chat_id = m1.chat_id AND latest.max_created = m1.sent_at
       ) m ON m.chat_id = r.room_id
-      LEFT JOIN room_members other_rm ON other_rm.room_id = r.room_id AND other_rm.user_id != ?
-      LEFT JOIN users u ON u.user_id = other_rm.user_id
-      WHERE rm.user_id = ?
       ORDER BY m.sent_at DESC
     `;
 
-    const rows = await all(sql, [userId, userId]);
+    const rows = await all(sql, [userId, userId, userId, userId]);
 
     return rows.map(row => ({
       room_id: row.room_id,
@@ -120,7 +162,7 @@ module.exports = function createRoomService(db) {
    */
   async function isGroupRoom(roomId) {
     return await get(
-      "SELECT * FROM rooms WHERE id = ? AND is_group = 1",
+      "SELECT * FROM rooms WHERE room_id = ? AND is_group = 1",
       [roomId]
     );
   }

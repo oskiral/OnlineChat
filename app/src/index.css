@@ -535,3 +535,151 @@ body {
     padding: 0.5rem 1rem;
   }
 }
+
+/* Chat menu styles */
+.chat-menu {
+  margin-left: auto;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.chat-menu:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+/* Group creation modal styles */
+.friend-selection {
+  margin: 1rem 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.friend-selection h4 {
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.friend-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.friend-checkbox:hover {
+  background-color: rgba(46, 137, 255, 0.1);
+  border-color: var(--accent-blue);
+  transform: translateY(-1px);
+}
+
+.friend-checkbox .friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.friend-checkbox .friend-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.friend-checkbox .friend-username {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.friend-checkbox .friend-status {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.friend-checkbox input[type="checkbox"] {
+  margin-left: auto;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent-blue);
+  flex-shrink: 0;
+  transform: scale(1.2);
+  margin-block: auto;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.modal-buttons .create-btn {
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.modal-buttons .cancel-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid #2a2a3d;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.group-indicator {
+  font-size: 0.75rem;
+  color: var(--accent-blue);
+  font-weight: 400;
+}
+
+.group-info {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.create-btn, .cancel-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.create-btn {
+  background-color: var(--accent-blue);
+  color: white;
+}
+
+.create-btn:hover {
+  background-color: #1E6FE6;
+}
+
+.cancel-btn {
+  background-color: #6b7280;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background-color: #555;
+}
