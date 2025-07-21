@@ -5,6 +5,7 @@ import resizeImage from "../../utils/resizeImage";
 import { API_BASE_URL, API_ENDPOINTS, MESSAGE_LIMITS, FILE_LIMITS } from "../../constants";
 import "../../styles/Chat.css";
 import GroupChat from "./GroupChat";
+import Poll from "../ui/Poll";
 
 export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
   const [fileName, setFileName] = useState("");
@@ -366,6 +367,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
             </div>
           );
         })}
+        <Poll question="What's your favorite color?" options={["Red", "Blue", "Green"]} onVote={(option) => console.log("Voted for:", option)} />
         <div ref={messagesEndRef} />
       </div>
 
