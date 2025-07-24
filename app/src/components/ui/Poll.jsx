@@ -2,75 +2,67 @@ import { useState } from "react";
 import "../../styles/Poll.css";
 
 export default function Poll({ 
-  question, 
-  options, 
-  onVote, 
-  allowMultiple = false, 
-  showResults = false, 
-  results = {},
-  userVotes = [],
-  totalVotes = 0,
-  createdBy,
-  timeLeft
+  poll,
+  onVote,
+  showResults = false,
+  currentUserId
 }) {
-  const [selectedOptions, setSelectedOptions] = useState([]);
-  const [hasVoted, setHasVoted] = useState(userVotes.length > 0);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [hasVoted, setHasVoted] = useState(poll.userVotes && poll.userVotes.length > 0);
 
-  const handleOptionSelect = (option, index) => {
-    if (hasVoted && !showResults) return;
-    
-    if (allowMultiple) {
-      setSelectedOptions(prev => 
-        prev.includes(index) 
-          ? prev.filter(i => i !== index)
-          : [...prev, index]
-      );
-    } else {
-      setSelectedOptions([index]);
-    }
+  const handleOptionSelect = (optionIndex) => {
+    if (hasVoted) return;
+    setSelectedOption(optionIndex);
   };
 
   const handleVote = () => {
-    if (selectedOptions.length === 0) return;
+    if (selectedOption === null) return;
     
-    const votedOptions = selectedOptions.map(index => options[index]);
-    onVote(votedOptions);
+    onVote(poll.poll_id, selectedOption);
     setHasVoted(true);
   };
 
-  const getPercentage = (option) => {
-    if (totalVotes === 0) return 0;
-    return Math.round((results[option] || 0) / totalVotes * 100);
+  const getVoteCount = (optionIndex) => {
+    const vote = poll.votes?.find(v => v.option_id === optionIndex);
+    return vote ? vote.vote_count : 0;
+  };
+
+  const getPercentage = (optionIndex) => {
+    if (!poll.totalVotes || poll.totalVotes === 0) return 0;
+    const voteCount = getVoteCount(optionIndex);
+    return Math.round((voteCount / poll.totalVotes) * 100);
+  };
+
+  const isUserVote = (optionIndex) => {
+    return poll.userVotes && poll.userVotes.includes(optionIndex);
   };
 
   return (
     <div className="poll">
       <div className="poll-header">
-        <h3 className="poll-title">{question}</h3>
-        {createdBy && (
-          <div className="poll-meta">
-            <span className="poll-author">by {createdBy}</span>
-            {timeLeft && <span className="poll-time">• {timeLeft}</span>}
-          </div>
-        )}
+        <h3 className="poll-title">{poll.question}</h3>
+        <div className="poll-meta">
+          <span className="poll-author">by {poll.creator_username}</span>
+          <span className="poll-time">• {new Date(poll.created_at).toLocaleString()}</span>
+        </div>
       </div>
 
       <div className="poll-options">
-        {options.map((option, index) => {
-          const isSelected = selectedOptions.includes(index);
-          const isUserVote = userVotes.includes(option);
-          const percentage = getPercentage(option);
-          const voteCount = results[option] || 0;
+        {poll.options.map((option, index) => {
+          const isSelected = selectedOption === index;
+          const isCurrentUserVote = isUserVote(index);
+          const percentage = getPercentage(index);
+          const voteCount = getVoteCount(index);
 
           return (
             <div 
               key={index} 
-              className={`poll-option ${isSelected ? 'selected' : ''} ${isUserVote ? 'user-voted' : ''}`}
-              onClick={() => handleOptionSelect(option, index)}
+              className={`poll-option ${isSelected ? 'selected' : ''} ${isCurrentUserVote ? 'user-voted' : ''} ${hasVoted || showResults ? 'disabled' : ''}`}
+              onClick={() => handleOptionSelect(index)}
             >
               <div className="poll-option-content">
                 <span className="poll-option-text">{option}</span>
-                {showResults && (
+                {(showResults || hasVoted) && (
                   <div className="poll-option-stats">
                     <span className="poll-percentage">{percentage}%</span>
                     <span className="poll-votes">({voteCount})</span>
@@ -78,14 +70,14 @@ export default function Poll({
                 )}
               </div>
               
-              {showResults && (
+              {(showResults || hasVoted) && (
                 <div 
                   className="poll-option-bar"
                   style={{ width: `${percentage}%` }}
                 />
               )}
               
-              {isUserVote && <div className="user-vote-indicator">✓</div>}
+              {isCurrentUserVote && <div className="user-vote-indicator">✓</div>}
             </div>
           );
         })}
@@ -94,22 +86,19 @@ export default function Poll({
       {!hasVoted && !showResults && (
         <div className="poll-actions">
           <button 
-            className={`poll-vote-btn ${selectedOptions.length === 0 ? 'disabled' : ''}`}
+            className={`poll-vote-btn ${selectedOption === null ? 'disabled' : ''}`}
             onClick={handleVote}
-            disabled={selectedOptions.length === 0}
+            disabled={selectedOption === null}
           >
-            Vote{allowMultiple && selectedOptions.length > 1 ? ` (${selectedOptions.length})` : ''}
+            Vote
           </button>
-          {allowMultiple && (
-            <span className="poll-hint">Select multiple options</span>
-          )}
         </div>
       )}
 
-      {showResults && (
+      {(showResults || hasVoted) && (
         <div className="poll-summary">
           <span className="poll-total-votes">
-            {totalVotes} vote{totalVotes !== 1 ? 's' : ''} total
+            {poll.totalVotes || 0} vote{(poll.totalVotes || 0) !== 1 ? 's' : ''} total
           </span>
         </div>
       )}

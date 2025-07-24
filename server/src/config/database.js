@@ -107,6 +107,31 @@ db.serialize(() => {
       FOREIGN KEY(receiver_id) REFERENCES users(user_id)
     );
   `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS polls (
+      poll_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question TEXT NOT NULL,
+      options TEXT NOT NULL, -- Store options as a JSON string
+      creator_id INTEGER NOT NULL,
+      chat_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (creator_id) REFERENCES users(user_id),
+      FOREIGN KEY (chat_id) REFERENCES rooms(room_id)
+    );
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS votes (
+      vote_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      poll_id INTEGER NOT NULL,
+      option_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (poll_id) REFERENCES polls(poll_id),
+      FOREIGN KEY (user_id) REFERENCES users(user_id)
+    );
+  `);
 
 });
 

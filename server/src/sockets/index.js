@@ -142,6 +142,19 @@ function registerSocketHandlers(io, db) {
       console.log(`👥 User ${socket.user_id} left group ${groupId}`);
     });
 
+    // Poll handlers
+    socket.on("pollCreated", ({ chatId, poll }) => {
+      console.log(`📊 Poll created in chat ${chatId}:`, poll.question);
+      // Broadcast to all members of the chat
+      socket.to(String(chatId)).emit("pollCreated", { poll });
+    });
+
+    socket.on("pollVoted", ({ chatId, pollId, optionIndex, userId }) => {
+      console.log(`🗳️ User ${userId} voted on poll ${pollId}, option ${optionIndex}`);
+      // Broadcast to all members of the chat
+      socket.to(String(chatId)).emit("pollVoted", { pollId, optionIndex, userId });
+    });
+
     socket.on("group_message", ({ groupId, message }) => {
       if (!groupId || !message) {
         return console.error("Invalid group message payload");

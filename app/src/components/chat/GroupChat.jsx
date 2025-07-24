@@ -2,12 +2,16 @@ import { useEffect, useState, useRef } from "react";
 import { useSocket } from "../../contexts/SocketProvider";
 import resizeImage from "../../utils/resizeImage";
 import { API_BASE_URL, API_ENDPOINTS, MESSAGE_LIMITS, FILE_LIMITS } from "../../constants";
+import Poll from "../ui/Poll";
+import CreatePollModal from "../ui/CreatePollModal";
 import "../../styles/Chat.css";
 
 export default function GroupChat({ selectedChat, user, token }) {
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [polls, setPolls] = useState([]);
+  const [showCreatePollModal, setShowCreatePollModal] = useState(false);
   const messagesEndRef = useRef(null);
   const [inputValue, setInputValue] = useState("");
   const inputFileRef = useRef(null);
@@ -17,6 +21,104 @@ export default function GroupChat({ selectedChat, user, token }) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Fetch polls when selectedChat changes
+  useEffect(() => {
+    if (selectedChat && selectedChat.room_id) {
+      fetchPolls();
+    }
+  }, [selectedChat]);
+
+  const fetchPolls = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.POLLS.GET}?chatId=${selectedChat.room_id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const pollsData = await response.json();
+        setPolls(pollsData);
+      } else {
+        console.error("Failed to fetch polls");
+      }
+    } catch (error) {
+      console.error("Error fetching polls:", error);
+    }
+  };
+
+  const handleCreatePoll = async (pollData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.POLLS.CREATE}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...pollData,
+          chatId: selectedChat.room_id,
+        }),
+      });
+
+      if (response.ok) {
+        const newPoll = await response.json();
+        setPolls(prev => [newPoll, ...prev]);
+        
+        // Emit poll created event via socket
+        if (socket) {
+          socket.emit("pollCreated", {
+            chatId: selectedChat.room_id,
+            poll: newPoll
+          });
+        }
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to create poll");
+      }
+    } catch (error) {
+      console.error("Error creating poll:", error);
+      alert("Failed to create poll");
+    }
+  };
+
+  const handleVotePoll = async (pollId, optionIndex) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.POLLS.VOTE}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pollId,
+          optionIndex,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh polls to get updated vote counts
+        fetchPolls();
+        
+        // Emit vote event via socket
+        if (socket) {
+          socket.emit("pollVoted", {
+            chatId: selectedChat.room_id,
+            pollId,
+            optionIndex,
+            userId: user.user_id
+          });
+        }
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to vote");
+      }
+    } catch (error) {
+      console.error("Error voting on poll:", error);
+      alert("Failed to vote");
+    }
+  };
 
   useEffect(() => {
     console.log("🎯 GroupChat useEffect triggered - socket:", !!socket, "selectedChat:", !!selectedChat);
@@ -132,6 +234,18 @@ export default function GroupChat({ selectedChat, user, token }) {
 
     socket.on("messages", handleMessages);
     socket.on("newMessage", handleNew);
+    
+    // Poll socket listeners
+    socket.on("pollCreated", ({ poll }) => {
+      if (String(poll.chat_id) === String(selectedChat.room_id)) {
+        setPolls(prev => [poll, ...prev]);
+      }
+    });
+
+    socket.on("pollVoted", ({ pollId }) => {
+      // Refresh polls when someone votes
+      fetchPolls();
+    });
 
     console.log("🔗 Socket listeners attached for group chat:", selectedChat.room_id);
 
@@ -139,6 +253,8 @@ export default function GroupChat({ selectedChat, user, token }) {
       console.log("🧹 Cleaning up socket listeners for group chat:", selectedChat.room_id);
       socket.off("messages", handleMessages);
       socket.off("newMessage", handleNew);
+      socket.off("pollCreated");
+      socket.off("pollVoted");
     };
   }, [socket, selectedChat, user.user_id]);
 
@@ -284,8 +400,11 @@ export default function GroupChat({ selectedChat, user, token }) {
           </div>
         </div>
         <div className="chat-header-menu">
+          <div className="menu-option" onClick={() => setShowCreatePollModal(true)} title="Create Poll">
+            <img src="/media/vote.svg" alt="Create Poll" className="sidebar-icon" />
+          </div>
           <div className="menu-option">
-              <img src="/media/options.svg" alt="Options" className="sidebar-icon" />
+            <img src="/media/options.svg" alt="Options" className="sidebar-icon" />
           </div>
         </div>
       </div>
@@ -293,7 +412,20 @@ export default function GroupChat({ selectedChat, user, token }) {
       <div className="chat-messages">
         {console.log("🎨 Rendering group messages, count:", messages.length, "messages:", messages)}
         {console.log("👤 Current user:", user)}
-        {messages.length === 0 && <div>No messages yet...</div>}
+        
+        {/* Render polls first */}
+        {polls.map((poll) => (
+          <div key={`poll-${poll.poll_id}`} className="chat-message poll-message">
+            <Poll 
+              poll={poll}
+              onVote={handleVotePoll}
+              showResults={poll.userVotes && poll.userVotes.length > 0}
+              currentUserId={user.user_id}
+            />
+          </div>
+        ))}
+        
+        {messages.length === 0 && polls.length === 0 && <div>No messages yet...</div>}
         {messages.map((msg, i) => {
           const isMine = msg.sender_id === user.user_id;
           console.log("🎨 Rendering group message:", i, {
@@ -347,6 +479,12 @@ export default function GroupChat({ selectedChat, user, token }) {
           Send
         </button> 
       </div>
+
+      <CreatePollModal 
+        isOpen={showCreatePollModal}
+        onClose={() => setShowCreatePollModal(false)}
+        onCreatePoll={handleCreatePoll}
+      />
     </div>
   );
 }

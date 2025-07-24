@@ -46,6 +46,11 @@ export const API_ENDPOINTS = {
     UNREAD_COUNTS: '/api/messages/unread-counts',
     UPLOAD: '/api/messages/upload',
   },
+  POLLS: {
+    CREATE: '/api/polls',
+    GET: '/api/polls',
+    VOTE: '/api/polls/vote',
+  },
 };
 
 // Socket Events

@@ -21,11 +21,13 @@ const friendRoutes = require("./routes/friendRoutes.js");
 const userRoutes = require("./routes/userRoutes.js");
 const roomRoutes = require("./routes/roomRoutes.js");
 const messageRoutes = require("./routes/messageRoutes.js");
+const pollRoutes = require("./routes/pollRoutes.js");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/polls", pollRoutes);
 app.use("/api/messages", messageRoutes);
 
 
