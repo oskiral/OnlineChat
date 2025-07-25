@@ -25,21 +25,38 @@ export default function Avatar({ entity, type = "user", onUpload, token, hideRem
         getAvatarUrl(entity.avatar, "/media/default.jpg") : 
         getAvatarUrl(entity.avatar, "/media/default.jpg");
     const uploadEndpoint = isGroup ? API_ENDPOINTS.GROUP.UPLOAD_AVATAR(entity.room_id) : API_ENDPOINTS.USER.UPLOAD_AVATAR;
-    const removeEndpoint = isGroup ? API_ENDPOINTS.GROUP?.REMOVE_AVATAR?.(entity.room_id) : API_ENDPOINTS.USER.REMOVE_AVATAR;
+    const removeEndpoint = isGroup ? 
+        null : // Group avatar removal not implemented yet
+        API_ENDPOINTS.USER.REMOVE_AVATAR;
     const altText = isGroup ? "Group Avatar" : "User Avatar";
     const titleText = isGroup ? "Click to change group photo" : "Click to change avatar";
 
     async function unUploadAvatar() {
-        onUpload(null);
-        const res = await fetch(`${API_BASE_URL}${removeEndpoint}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: isGroup ? JSON.stringify({ groupId: entity.room_id }) : undefined
-        });
-        if (!res.ok) {
+        if (!removeEndpoint) {
+            alert("Remove avatar functionality not available for this type");
+            return;
+        }
+        
+        try {
+            const res = await fetch(`${API_BASE_URL}${removeEndpoint}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: isGroup ? JSON.stringify({ groupId: entity.room_id }) : undefined
+            });
+            
+            if (res.ok) {
+                // Call the onUpload callback with null to indicate avatar was removed
+                if (onUpload) {
+                    onUpload(null);
+                }
+            } else {
+                alert("Failed to remove avatar");
+            }
+        } catch (error) {
+            console.error("Error removing avatar:", error);
             alert("Failed to remove avatar");
         }
     }
@@ -68,6 +85,16 @@ export default function Avatar({ entity, type = "user", onUpload, token, hideRem
             },
             body: formData
         });
+
+        if (res.ok) {
+            const result = await res.json();
+            // Call the onUpload callback with the new avatar URL
+            if (onUpload) {
+                onUpload(result.avatar || result.avatarUrl);
+            }
+        } else {
+            alert("Failed to upload avatar");
+        }
     }
 
     function triggerFileInput(e) {
@@ -98,7 +125,7 @@ export default function Avatar({ entity, type = "user", onUpload, token, hideRem
                 style={{ display: "none" }}
                 onChange={handleAvatarChange}
             />
-            {!hideRemove && isEditable && (
+            {!hideRemove && isEditable && removeEndpoint && (
                 <button onClick={unUploadAvatar}>{isGroup ? "Remove Group Photo" : "Remove Avatar"}</button>
             )}
         </div>

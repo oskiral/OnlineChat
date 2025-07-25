@@ -101,7 +101,7 @@ export default function UserSettings({ user, setUser }) {
             <div className="settings-form">
                 <label>Change Avatar</label>
 
-                <Avatar user={user} token={user.token} onUpload={onAvatarUpload}/>
+                <Avatar entity={user} type="user" token={user.token} onUpload={onAvatarUpload}/>
             </div>
 
             <form onSubmit={handlePasswordChange} className="settings-form">
