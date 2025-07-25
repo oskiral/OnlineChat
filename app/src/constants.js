@@ -18,7 +18,6 @@ export const API_ENDPOINTS = {
     LOGIN: '/api/auth/login',
     REGISTER: '/api/auth/register',
     LOGOUT: '/api/auth/logout',
-    // Legacy
     LEGACY_LOGOUT: '/logout',
   },
   USER: {
@@ -29,7 +28,6 @@ export const API_ENDPOINTS = {
     REMOVE_AVATAR: '/api/user/removeAvatar',
     UPDATE_USERNAME: '/api/user/changeUsername',
     CHANGE_PASSWORD: '/api/user/changePassword',
-    // Legacy endpoints
     UN_UPLOAD_AVATAR: '/unUploadAvatar',
     GET_USER: (id) => `/users/${id}`,
   },
@@ -50,6 +48,11 @@ export const API_ENDPOINTS = {
     CREATE: '/api/polls',
     GET: '/api/polls',
     VOTE: '/api/polls/vote',
+  },
+  GROUP: {
+    BY_ID: (id) => `/api/groups/${id}`,
+    UPLOAD_AVATAR: (id) => `/api/groups/${id}/avatar`,
+    // REMOVE_AVATAR: (id) => `/api/groups/${id}/removeAvatar`, // Uncomment if you add remove endpoint
   },
 };
 

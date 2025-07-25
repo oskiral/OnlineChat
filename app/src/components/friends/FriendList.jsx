@@ -48,6 +48,7 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
               room_id: room.room_id,
               room_name: room.room_name,
               username: room.room_name, // For display consistency
+              avatar: room.avatar, // Include group avatar
               isGroup: true,
               last_message: room.last_message,
               last_message_date: room.last_message_date,
@@ -283,16 +284,30 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
       fetchFriendsWithMessages();
     }
 
+    function onGroupAvatarUpdated({ groupId, avatar }) {
+      console.log("🖼️ Group avatar updated:", { groupId, avatar });
+      setFriends(prevFriends => {
+        return prevFriends.map(friend => {
+          if (friend.isGroup && friend.room_id === groupId) {
+            return { ...friend, avatar };
+          }
+          return friend;
+        });
+      });
+    }
+
     socket.on("newMessage", onNewMessage);
     socket.on("updateUnreadCounts", onUpdateUnreadCounts);
     socket.on("messagesReadConfirmation", onMessagesReadConfirmation);
     socket.on("friend-added", onFriendAdded);
+    socket.on("groupAvatarUpdated", onGroupAvatarUpdated);
 
     return () => {
       socket.off("newMessage", onNewMessage);
       socket.off("updateUnreadCounts", onUpdateUnreadCounts);
       socket.off("messagesReadConfirmation", onMessagesReadConfirmation);
       socket.off("friend-added", onFriendAdded);
+      socket.off("groupAvatarUpdated", onGroupAvatarUpdated);
     };
   }, [socket, user.user_id, selectedChat?.room_id]);
 
@@ -465,7 +480,18 @@ export default function FriendList({ user, token, onSelectedChat, selectedChat }
             >
               <div className="chat-avatar">
                 <img 
-                  src={f.isGroup ? "/media/default.jpg" : (f.avatar || "/media/default.jpg")} 
+                  src={f.isGroup 
+                    ? (f.avatar 
+                        ? (f.avatar.startsWith('http://') || f.avatar.startsWith('https://') 
+                            ? f.avatar 
+                            : `${API_BASE_URL}${f.avatar}`)
+                        : "/media/default.jpg")
+                    : (f.avatar 
+                        ? (f.avatar.startsWith('http://') || f.avatar.startsWith('https://') 
+                            ? f.avatar 
+                            : `${API_BASE_URL}${f.avatar}`)
+                        : "/media/default.jpg")
+                  } 
                   alt={f.username || f.room_name || "Chat"} 
                 />
                 {!f.isGroup && f.user_id && (

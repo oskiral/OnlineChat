@@ -93,6 +93,7 @@ function App() {
         setUser={setUser}
         onLogout={handleLogout}
         onSelectedChat={(chat) => setSelectedChat(chat)}
+        onSelectedChatUpdate={(updatedChat) => setSelectedChat(updatedChat)}
         selectedChat={selectedChat}
         activeView={activeView}
         setActiveView={setActiveView}

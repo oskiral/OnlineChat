@@ -93,8 +93,11 @@ module.exports = function createRoomService(db) {
         r.room_id,
         r.room_name,
         r.is_group,
+        r.avatar AS group_avatar,
         m.content AS last_message,
         m.sent_at AS last_message_date,
+        m.fileUrl AS last_file_url,
+        sender.username AS last_sender_username,
         CASE 
           WHEN r.is_group = 1 THEN NULL 
           ELSE (
@@ -128,14 +131,16 @@ module.exports = function createRoomService(db) {
       FROM rooms r
       JOIN room_members rm ON rm.room_id = r.room_id AND rm.user_id = ?
       LEFT JOIN (
-        SELECT m1.*
+        SELECT m1.*, u.username
         FROM messages m1
+        JOIN users u ON u.user_id = m1.sender_id
         JOIN (
           SELECT chat_id, MAX(sent_at) AS max_created
           FROM messages
           GROUP BY chat_id
         ) latest ON latest.chat_id = m1.chat_id AND latest.max_created = m1.sent_at
       ) m ON m.chat_id = r.room_id
+      LEFT JOIN users sender ON sender.user_id = m.sender_id
       ORDER BY m.sent_at DESC
     `;
 
@@ -145,8 +150,11 @@ module.exports = function createRoomService(db) {
       room_id: row.room_id,
       room_name: row.room_name,
       is_group: row.is_group,
+      avatar: row.is_group ? row.group_avatar : null,
       last_message: row.last_message,
       last_message_date: row.last_message_date,
+      last_file_url: row.last_file_url,
+      last_sender_username: row.last_sender_username,
       user: row.is_group
         ? null
         : {

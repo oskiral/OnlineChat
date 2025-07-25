@@ -4,14 +4,17 @@ import resizeImage from "../../utils/resizeImage";
 import { API_BASE_URL, API_ENDPOINTS, MESSAGE_LIMITS, FILE_LIMITS } from "../../constants";
 import Poll from "../ui/Poll";
 import CreatePollModal from "../ui/CreatePollModal";
+import GroupPanel from "../ui/GroupPanel";
 import "../../styles/Chat.css";
 
-export default function GroupChat({ selectedChat, user, token }) {
+export default function GroupChat({ selectedChat, user, token, onChatUpdate }) {
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [messages, setMessages] = useState([]);
   const [polls, setPolls] = useState([]);
   const [showCreatePollModal, setShowCreatePollModal] = useState(false);
+  const [showGroupOptions, setShowGroupOptions] = useState(false);
+  const [groupData, setGroupData] = useState(null);
   const messagesEndRef = useRef(null);
   const [inputValue, setInputValue] = useState("");
   const inputFileRef = useRef(null);
@@ -29,6 +32,44 @@ export default function GroupChat({ selectedChat, user, token }) {
     }
   }, [selectedChat]);
 
+
+  async function displayGroupOptions(group) {
+    // Fetch group data from backend using constants
+    try {
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GROUP.BY_ID(group.room_id)}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Map database fields to expected format
+        const formattedGroup = {
+          ...data,
+          name: data.room_name,
+          room_id: data.room_id
+        };
+        setGroupData(formattedGroup);
+        setShowGroupOptions(true);
+      }
+    } catch (err) {
+      console.error("Failed to fetch group data", err);
+    }
+  }
+
+  const handleAvatarUpload = async (avatarUrl) => {
+    // Update local group data
+    if (groupData) {
+      setGroupData(prev => ({ ...prev, avatar: avatarUrl }));
+    }
+    // Update selectedChat avatar in parent component
+    if (selectedChat && onChatUpdate) {
+      onChatUpdate({
+        ...selectedChat,
+        avatar: avatarUrl
+      });
+    }
+  };
   const fetchPolls = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.POLLS.GET}?chatId=${selectedChat.room_id}`, {
@@ -247,6 +288,23 @@ export default function GroupChat({ selectedChat, user, token }) {
       fetchPolls();
     });
 
+    socket.on("groupAvatarUpdated", ({ groupId, avatar }) => {
+      console.log("🖼️ Group avatar updated in GroupChat:", { groupId, avatar, currentGroupId: selectedChat.room_id });
+      if (String(groupId) === String(selectedChat.room_id)) {
+        // Update selectedChat avatar
+        if (onChatUpdate) {
+          onChatUpdate({
+            ...selectedChat,
+            avatar: avatar
+          });
+        }
+        // Update local groupData if modal is open
+        if (groupData && groupData.room_id === groupId) {
+          setGroupData(prev => ({ ...prev, avatar }));
+        }
+      }
+    });
+
     console.log("🔗 Socket listeners attached for group chat:", selectedChat.room_id);
 
     return () => {
@@ -255,6 +313,7 @@ export default function GroupChat({ selectedChat, user, token }) {
       socket.off("newMessage", handleNew);
       socket.off("pollCreated");
       socket.off("pollVoted");
+      socket.off("groupAvatarUpdated");
     };
   }, [socket, selectedChat, user.user_id]);
 
@@ -390,7 +449,7 @@ export default function GroupChat({ selectedChat, user, token }) {
       <div className="chat-header">
         <div className="chat-user-info">
           <div className="chat-avatar">
-            <img src="/media/default.jpg" alt="Group Avatar" />
+            <img src={selectedChat.avatar ? `${API_BASE_URL}${selectedChat.avatar}` : "/media/default.jpg"} alt="Group Avatar" />
           </div>
           <div className="more-info">
             <div className="chat-username">
@@ -403,10 +462,20 @@ export default function GroupChat({ selectedChat, user, token }) {
           <div className="menu-option" onClick={() => setShowCreatePollModal(true)} title="Create Poll">
             <img src="/media/vote.svg" alt="Create Poll" className="sidebar-icon" />
           </div>
-          <div className="menu-option">
+          <div className="menu-option" onClick={() => displayGroupOptions(selectedChat)} title="Group Options">
             <img src="/media/options.svg" alt="Options" className="sidebar-icon" />
           </div>
         </div>
+
+      {showGroupOptions && groupData && (
+        <div className="modal-overlay" onClick={() => setShowGroupOptions(false)}>
+          <div className="modal-content" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowGroupOptions(false)}>×</button>
+            <GroupPanel group={groupData} token={token} onUpload={handleAvatarUpload} />
+          </div>
+        </div>
+      )}
+
       </div>
 
       <div className="chat-messages">

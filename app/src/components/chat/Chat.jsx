@@ -6,7 +6,7 @@ import { API_BASE_URL, API_ENDPOINTS, MESSAGE_LIMITS, FILE_LIMITS } from "../../
 import "../../styles/Chat.css";
 import GroupChat from "./GroupChat";
 
-export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
+export default function Chat({ user, token, onLogout, setUser, selectedChat, onSelectedChatUpdate }) {
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -300,7 +300,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat }) {
     )
   }
   if (selectedChat?.isGroup) {
-    return <GroupChat selectedChat={selectedChat} user={user} token={token} />;
+    return <GroupChat selectedChat={selectedChat} user={user} token={token} onChatUpdate={onSelectedChatUpdate} />;
   }
   const lastMessage = messages[messages.length - 1];
   const lastMessageReadByOther =

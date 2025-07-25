@@ -1,0 +1,125 @@
+/* GroupPanel Styles - matches app design */
+
+.group-panel {
+  background: var(--bg-sidebar);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  border: 1px solid #2a2a3d;
+  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.group-panel .avatar-component {
+  margin-bottom: 1.2rem;
+}
+
+.group-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.change-group-photo {
+  margin-bottom: 1.2rem;
+}
+.change-group-photo button {
+  background: var(--accent-blue);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.change-group-photo button:hover {
+  background: #1e70c1;
+}
+
+.group-members {
+  width: 100%;
+  margin-top: 1.2rem;
+}
+.group-members h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.7rem;
+}
+.group-members ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.group-members li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.2rem;
+  border-bottom: 1px solid #23233a;
+}
+.group-members li:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.group-members li .avatar-component {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+   margin-block: 0.2rem;
+}
+
+.group-members li:last-child {
+  border-bottom: none;
+}
+
+.group-members li .avatar-component .avatar {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.member-username {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+.group-member-options {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+.group-member-options img {
+  width: 22px;
+  height: 22px;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.group-member-options img:hover {
+  opacity: 1;
+}
+
+@media (max-width: 600px) {
+  .group-panel {
+    padding: 1rem 0.5rem;
+    max-width: 98vw;
+  }
+  .group-name {
+    font-size: 1.2rem;
+  }
+  .group-members h3 {
+    font-size: 1rem;
+  }
+  .member-username {
+    font-size: 0.95rem;
+  }
+}

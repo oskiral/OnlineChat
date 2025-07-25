@@ -55,6 +55,7 @@ db.serialize(() => {
       is_group BOOLEAN DEFAULT 0,
       created_by INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      avatar TEXT,
       FOREIGN KEY (created_by) REFERENCES users(user_id)
     );
   `);
