@@ -25,7 +25,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat, onS
 
   useEffect(() => {
     console.log("🎯 Chat useEffect triggered - socket:", !!socket, "selectedChat:", !!selectedChat);
-    
+
     if (!socket || !selectedChat) {
       console.log("⚠️ Missing dependencies - socket:", !!socket, "selectedChat:", !!selectedChat);
       return;
@@ -56,7 +56,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat, onS
         sender: m.sender_username || m.username,
         content: m.content?.substring(0, 50) + '...'
       })));
-      
+
       if (String(chatId) === String(selectedChat.room_id)) {
         console.log("✅ Setting messages for chat:", chatId);
         console.log("📝 Messages being set:", messages);
@@ -68,109 +68,109 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat, onS
       }
     };
 
-  const handleNew = (msg) => {
-    console.log("📥 Received newMessage:", msg);
-    
-    if (!msg.sender_id && msg.user?.user_id) {
-      msg.sender_id = msg.user.user_id;
-    }
-    if (String(msg.chat_id) !== String(selectedChat.room_id)) return;
-    
-    // Check if this message is from current user (our own message echoed back)
-    if (msg.sender_id === user.user_id) {
-      console.log("🔄 Received our own message from server");
-      
-      setMessages((prev) => {
-        // Look for the most recent temporary message
-        const tempMessageIndex = prev.findIndex(m => 
-          m.message_id && 
-          m.message_id.toString().startsWith('temp-') &&
-          m.content === msg.content &&
-          m.sender_id === user.user_id
-        );
-        
-        if (tempMessageIndex !== -1) {
-          console.log("✅ Replacing temporary message with server response");
-          const updatedMessages = [...prev];
-          updatedMessages[tempMessageIndex] = {
+    const handleNew = (msg) => {
+      console.log("📥 Received newMessage:", msg);
+
+      if (!msg.sender_id && msg.user?.user_id) {
+        msg.sender_id = msg.user.user_id;
+      }
+      if (String(msg.chat_id) !== String(selectedChat.room_id)) return;
+
+      // Check if this message is from current user (our own message echoed back)
+      if (msg.sender_id === user.user_id) {
+        console.log("🔄 Received our own message from server");
+
+        setMessages((prev) => {
+          // Look for the most recent temporary message
+          const tempMessageIndex = prev.findIndex(m =>
+            m.message_id &&
+            m.message_id.toString().startsWith('temp-') &&
+            m.content === msg.content &&
+            m.sender_id === user.user_id
+          );
+
+          if (tempMessageIndex !== -1) {
+            console.log("✅ Replacing temporary message with server response");
+            const updatedMessages = [...prev];
+            updatedMessages[tempMessageIndex] = {
+              ...msg,
+              username: msg.sender_username || user.username
+            };
+            return updatedMessages;
+          }
+
+          // If no temp message found, check if this exact message already exists
+          const duplicateExists = prev.some(m =>
+            m.message_id === msg.message_id ||
+            (m.content === msg.content &&
+              m.sender_id === msg.sender_id &&
+              Math.abs(new Date(m.sent_at) - new Date(msg.sent_at)) < 5000)
+          );
+
+          if (duplicateExists) {
+            console.log("⚠️ Duplicate message detected, ignoring");
+            return prev;
+          }
+
+          console.log("⚠️ No temp message found but adding anyway (edge case)");
+          return [...prev, {
             ...msg,
             username: msg.sender_username || user.username
-          };
-          return updatedMessages;
-        }
-        
-        // If no temp message found, check if this exact message already exists
-        const duplicateExists = prev.some(m => 
-          m.message_id === msg.message_id || 
-          (m.content === msg.content && 
-           m.sender_id === msg.sender_id && 
-           Math.abs(new Date(m.sent_at) - new Date(msg.sent_at)) < 5000)
+          }];
+        });
+        return;
+      }
+
+      // Message from another user
+      console.log("📨 Adding message from other user");
+      setMessages((prev) => {
+        // Check for duplicates from other users too
+        const duplicateExists = prev.some(m =>
+          m.message_id === msg.message_id ||
+          (m.content === msg.content &&
+            m.sender_id === msg.sender_id &&
+            Math.abs(new Date(m.sent_at) - new Date(msg.sent_at)) < 5000)
         );
-        
+
         if (duplicateExists) {
-          console.log("⚠️ Duplicate message detected, ignoring");
+          console.log("⚠️ Duplicate message from other user, ignoring");
           return prev;
         }
-        
-        console.log("⚠️ No temp message found but adding anyway (edge case)");
+
         return [...prev, {
           ...msg,
-          username: msg.sender_username || user.username
+          username: msg.sender_username || msg.username
         }];
       });
-      return;
-    }
-    
-    // Message from another user
-    console.log("📨 Adding message from other user");
-    setMessages((prev) => {
-      // Check for duplicates from other users too
-      const duplicateExists = prev.some(m => 
-        m.message_id === msg.message_id ||
-        (m.content === msg.content && 
-         m.sender_id === msg.sender_id && 
-         Math.abs(new Date(m.sent_at) - new Date(msg.sent_at)) < 5000)
-      );
-      
-      if (duplicateExists) {
-        console.log("⚠️ Duplicate message from other user, ignoring");
-        return prev;
+    };
+
+    function onMessagesReadConfirmation({ chatId }) {
+      if (chatId === selectedChat.room_id) {
+        setReadBy(new Set());
       }
-      
-      return [...prev, {
-        ...msg,
-        username: msg.sender_username || msg.username
-      }];
-    });
-  };
-
-  function onMessagesReadConfirmation({ chatId }) {
-    if (chatId === selectedChat.room_id) {
-      setReadBy(new Set());
     }
-  }
 
-  function onMessageReadBy({ chatId, readerId }) {
-    if (chatId !== selectedChat.room_id) return;
-    setReadBy(prev => new Set([...prev, readerId]));
-  }
+    function onMessageReadBy({ chatId, readerId }) {
+      if (chatId !== selectedChat.room_id) return;
+      setReadBy(prev => new Set([...prev, readerId]));
+    }
 
-  socket.on("messagesReadConfirmation", onMessagesReadConfirmation);
-  socket.on("messageReadBy", onMessageReadBy);
+    socket.on("messagesReadConfirmation", onMessagesReadConfirmation);
+    socket.on("messageReadBy", onMessageReadBy);
 
-  socket.on("messages", handleMessages);
-  socket.on("newMessage", handleNew);
+    socket.on("messages", handleMessages);
+    socket.on("newMessage", handleNew);
 
-  console.log("🔗 Socket listeners attached for chat:", selectedChat.room_id);
+    console.log("🔗 Socket listeners attached for chat:", selectedChat.room_id);
 
-  return () => {
-    console.log("🧹 Cleaning up socket listeners for chat:", selectedChat.room_id);
-    socket.off("messagesReadConfirmation", onMessagesReadConfirmation);
-    socket.off("messageReadBy", onMessageReadBy);
-    socket.off("messages", handleMessages);
-    socket.off("newMessage", handleNew);
-  };
-}, [socket, selectedChat, user.user_id]);
+    return () => {
+      console.log("🧹 Cleaning up socket listeners for chat:", selectedChat.room_id);
+      socket.off("messagesReadConfirmation", onMessagesReadConfirmation);
+      socket.off("messageReadBy", onMessageReadBy);
+      socket.off("messages", handleMessages);
+      socket.off("newMessage", handleNew);
+    };
+  }, [socket, selectedChat, user.user_id]);
 
 
   useEffect(() => {
@@ -217,13 +217,13 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat, onS
 
     const content = inputValue.trim();
     if (!content && !selectedFile) return;
-    
+
     // Check message length limit
     if (content.length > MESSAGE_LIMITS.MAX_LENGTH) {
       alert(`Message is too long! Maximum ${MESSAGE_LIMITS.MAX_LENGTH} characters allowed. Your message has ${content.length} characters.`);
       return;
     }
-    
+
     document.querySelector('.file-upload-btn').classList.remove('active');
 
     let fileUrl = null;
@@ -251,7 +251,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat, onS
 
     // Generate a temporary ID for optimistic update
     const tempId = `temp-${Date.now()}-${Math.random()}`;
-    
+
     console.log("📤 Sending message with tempId:", tempId, "content:", content);
 
     // Add local message to state - optimistic update
@@ -265,9 +265,9 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat, onS
       fileUrl,
       sent_at: new Date().toISOString(),
     };
-    
+
     console.log("📝 Adding optimistic message:", optimisticMessage);
-    
+
     setMessages(prev => [...prev, optimisticMessage]);
 
     // Emit the message to the server
@@ -294,9 +294,9 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat, onS
 
   if (!selectedChat) {
     return (
-    <div className="chat-window">
-      <div className="chat-placeholder"><h3>Select a chat to start messaging</h3></div>
-    </div>
+      <div className="chat-window">
+        <div className="chat-placeholder"><h3>Select a chat to start messaging</h3></div>
+      </div>
     )
   }
   if (selectedChat?.isGroup) {
@@ -332,7 +332,7 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat, onS
         </div>
         <div className="chat-header-menu">
           <div className="menu-option">
-              <img src="/media/options.svg" alt="Options" className="sidebar-icon" />
+            <img src="/media/options.svg" alt="Options" className="sidebar-icon" />
           </div>
         </div>
       </div>
@@ -386,12 +386,12 @@ export default function Chat({ user, token, onLogout, setUser, selectedChat, onS
           </div>
         </div>
         <div className="file-input-wrapper">
-        <input onChange={handleFileChange} accept="image/*,application/pdf" type="file" className="file-upload-input" ref={inputFileRef}  />
-        <div className="file-upload-btn" onClick={clickFileInput}><img src="../media/image-down.svg" alt="Upload" /></div>
-      </div>
+          <input onChange={handleFileChange} accept="image/*,application/pdf" type="file" className="file-upload-input" ref={inputFileRef} />
+          <div className="file-upload-btn" onClick={clickFileInput}><img src="../media/image-down.svg" alt="Upload" /></div>
+        </div>
         <button className="chat-send-btn" onClick={handleSendMessage}>
           Send
-        </button> 
+        </button>
       </div>
     </div>
   );
